@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
+config.AddEnvironmentVariables();
 // Add services to the container.
 
 builder.Services.AddControllers();
