@@ -1,16 +1,17 @@
 ﻿using Microsoft.Extensions.ObjectPool;
+using System.Collections.Concurrent;
 
 namespace AwoDevProxy.Api.Utils
 {
 	public class TimedTaskHolder<TKey, TResult>
 	{
-		private readonly Dictionary<TKey, TimedTaskCompletionSource<TResult>> _tasks;
+		private readonly ConcurrentDictionary<TKey, TimedTaskCompletionSource<TResult>> _tasks;
 		private readonly ObjectPool<TimedTaskCompletionSource<TResult>> _tcsPool;
 
 		public TimedTaskHolder(int poolSize = 10)
 		{
 			_tcsPool = new DefaultObjectPool<TimedTaskCompletionSource<TResult>>(new TimedTaskHolderPoolPolicy(), poolSize);
-			_tasks = new Dictionary<TKey, TimedTaskCompletionSource<TResult>>();
+			_tasks = new ConcurrentDictionary<TKey, TimedTaskCompletionSource<TResult>>();
 		}
 
 		public bool TrySetResult(TKey key, TResult result)
@@ -30,7 +31,7 @@ namespace AwoDevProxy.Api.Utils
 		public async Task<TimeOutResult<TResult>> GetTask(TKey key, TimeSpan? timeout)
 		{
 			var source = _tcsPool.Get();
-			_tasks.Add(key, source);
+			_tasks.TryAdd(key, source);
 
 			try
 			{
@@ -39,8 +40,8 @@ namespace AwoDevProxy.Api.Utils
 			}
 			finally
 			{
-				_tasks.Remove(key);
-				_tcsPool.Return(source);
+				if(_tasks.Remove(key, out _))
+					_tcsPool.Return(source);
 			}
 		}
 
