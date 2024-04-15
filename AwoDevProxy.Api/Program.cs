@@ -1,3 +1,4 @@
+using AwoDevProxy.Api.Middleware;
 using AwoDevProxy.Api.Proxy;
 using Microsoft.Extensions.Configuration;
 
@@ -10,10 +11,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton(config.GetSection("ProxyConfig").Get<ProxyConfig>());
-builder.Services.AddSingleton<ProxyManager>();
+builder.Services.AddSingleton<IProxyManager, ProxyManager>();
 
 var app = builder.Build();
-var manager = app.Services.GetRequiredService<ProxyManager>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -24,9 +24,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseWebSockets();
-
-//app.UseAuthorization();
-app.Use(manager.HandleAsync);
+app.UseMiddleware<ProxyRootingMiddleware>();
 
 app.MapControllers();
 

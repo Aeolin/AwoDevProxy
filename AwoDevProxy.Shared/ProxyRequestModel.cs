@@ -24,5 +24,6 @@ namespace AwoDevProxy.Shared
 
 		[Key(4)]
 		public byte[] Body { get; set; }
+
 	}
 }

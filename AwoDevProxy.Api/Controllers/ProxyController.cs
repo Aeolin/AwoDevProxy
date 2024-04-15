@@ -5,17 +5,18 @@ namespace AwoDevProxy.Api.Controllers
 {
 	public class ProxyController : ControllerBase
 	{
-		private ProxyManager _manager;
+		private IProxyManager _manager;
 		private ProxyConfig _config;
 
-		public ProxyController(ProxyManager manager, ProxyConfig config)
+		public ProxyController(IProxyManager manager, ProxyConfig config)
 		{
 			_manager=manager;
 			_config=config;
 		}
 
 		[Route("/ws/{name}")]
-		public async Task<IActionResult> SetupProxyAsync(string name, [FromQuery]bool force = false, [FromQuery]string authKey = null)
+		[ApiExplorerSettings(IgnoreApi = true)]
+		public async Task<IActionResult> SetupProxyAsync(string name, [FromQuery]bool force = false, [FromQuery]string authKey = null, [FromQuery]TimeSpan? requestTimeout = null)
 		{
 			if (HttpContext.WebSockets.IsWebSocketRequest == false)
 				return BadRequest();
@@ -23,12 +24,17 @@ namespace AwoDevProxy.Api.Controllers
 			if (_config.FixedKey != null && _config.FixedKey.Equals(authKey) == false)
 				return Forbid();
 
-			if (force == false && _manager.ProxyExists(name))
+			var exists = await _manager.IsProxyAvailableAsync(name);
+			if (force == false && exists)
 				return BadRequest("Proxy already exists for the give name");
 
+			var timeout = requestTimeout ?? _config.DefaultTimeout;
+			if (_config.MaxTimeout < timeout)
+				timeout = _config.MaxTimeout;
+
 			var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-			var proxy = await _manager.SetupProxyAsync(name, socket);
-			return await proxy.SocketTask;
+			var proxyTask = _manager.SetupProxy(name, socket, timeout);
+			return await proxyTask;
 		}
 	}
 }

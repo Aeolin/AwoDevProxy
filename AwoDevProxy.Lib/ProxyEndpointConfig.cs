@@ -14,15 +14,17 @@ namespace AwoDevProxy.Lib
 		public string Name { get; init; }
 		public int BufferSize { get; init; }
 		public string AuthKey { get; init; }
+		public bool TryReopen { get; init; }
 
 		[JsonConstructor]
-		public ProxyEndpointConfig(string localAddress, string proxyServer, string name, string authKey, int bufferSize = 2048)
+		public ProxyEndpointConfig(string localAddress, string proxyServer, string name, string authKey, bool tryReopen, int bufferSize = 2048)
 		{
 			LocalAddress=localAddress;
 			ProxyServer=proxyServer;
 			Name=name;
 			BufferSize=bufferSize;
 			AuthKey=authKey;
+			TryReopen = tryReopen;
 		}
 	}
 }

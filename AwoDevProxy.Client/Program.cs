@@ -1,4 +1,6 @@
 ﻿using AwoDevProxy.Lib;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Configuration;
 using System.CommandLine;
 using System.Reflection;
 
@@ -13,20 +15,25 @@ internal class Program
 		var nameOption = new Option<string>("--name", "The name the service should be available under the proxy");
 		var authOption = new Option<string>("--key", "Auth key for proxy server");
 		var bufferSizeOption = new Option<int>("--buffer-size", () => 2048, "Buffer size of the websockt");
+		var tryReopen = new Option<bool>("--try-reopen", () => false, "Try to reopen proxy if connection failed or lost");
 		rootCommand.AddOption(localOption);
 		rootCommand.AddOption(proxyOption);
 		rootCommand.AddOption(nameOption);
 		rootCommand.AddOption(authOption);
 		rootCommand.AddOption(bufferSizeOption);
-		rootCommand.SetHandler(Run, localOption, proxyOption, nameOption, authOption, bufferSizeOption);
+		rootCommand.AddOption(tryReopen);
+		rootCommand.SetHandler(Run, localOption, proxyOption, nameOption, authOption, tryReopen, bufferSizeOption);
 
 		return await rootCommand.InvokeAsync(args);
 	}
 
-	static async Task Run(string local, string proxy, string name, string authKey, int bufferSize = 2048)
+	static async Task Run(string local, string proxy, string name, string authKey, bool tryReopen, int bufferSize = 2048)
 	{
-		var config = new ProxyEndpointConfig(local, proxy, name, authKey, bufferSize);
-		var proxyClient = new ProxyEndpoint(config);
-		await proxyClient.RunAsync();
+		var config = new ProxyEndpointConfig(local, proxy, name, authKey, tryReopen, bufferSize);
+		var factory = LoggerFactory.Create(opts => opts.AddConsole());
+		var proxyClient = new ProxyEndpoint(config, factory);
+		var cts = new CancellationTokenSource();
+		Console.CancelKeyPress += (_, _) => cts.Cancel();
+		await proxyClient.RunAsync(cts);
 	}
 }

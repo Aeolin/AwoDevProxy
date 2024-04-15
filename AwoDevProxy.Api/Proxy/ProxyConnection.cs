@@ -1,4 +1,5 @@
-﻿using AwoDevProxy.Shared;
+﻿using AwoDevProxy.Api.Utils;
+using AwoDevProxy.Shared;
 using MessagePack;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.WebSockets;
@@ -10,85 +11,61 @@ namespace AwoDevProxy.Api.Proxy
 		public string Name { get; init; }
 		public WebSocket Socket { get; init; }
 		public Task<IActionResult> SocketTask { get; init; }
-		private readonly byte[] _buffer;
-		private readonly CancellationTokenSource _tokenSource;
-		private readonly MemoryStream _currentPacket;
-		private readonly Dictionary<Guid, TaskCompletionSource<ProxyResponseModel>> _openRequests = new Dictionary<Guid, TaskCompletionSource<ProxyResponseModel>>();
+		private int _bufferSize;
+		private readonly CancellationTokenSource _cancelSource;
+		private readonly TimeSpan _timeout;
+		private readonly TimedTaskHolder<Guid, ProxyResponseModel> _openRequests;
 
 		public event Action<ProxyConnection> SocketClosed;
-		public event Action<ProxyConnection, byte[]> PacketReceived;
 
-		private void HandlePacketReceived()
+		private void HandlePacketReceived(byte[] packet)
 		{
-			var data = _currentPacket.ToArray();
-			_currentPacket.SetLength(0);
-			PacketReceived?.Invoke(this, data);
-			var response = MessagePackSerializer.Deserialize<ProxyResponseModel>(data);
-			if(_openRequests.TryGetValue(response.RequestId, out var tcs))
-			{
-				tcs.TrySetResult(response);
-				_openRequests.Remove(response.RequestId);
-			}
+			var response = MessagePackSerializer.Deserialize<ProxyResponseModel>(packet);
+			_openRequests.SetResult(response.RequestId, response);
 		}
 
-		public async Task<ProxyResponseModel> SendRequestAsync(ProxyRequestModel model, int? timeout = 5000)
+		public async Task<ProxyResult> HandleRequestAsync(ProxyRequestModel model)
 		{
 			var data = MessagePackSerializer.Serialize(model);
-			var tcs = new TaskCompletionSource<ProxyResponseModel>();
-			try
-			{
-				_openRequests.Add(model.RequestId, tcs);
-				await Socket.SendAsync(data, WebSocketMessageType.Binary, true, _tokenSource.Token);
-				if (_tokenSource.IsCancellationRequested)
-					tcs.SetCanceled();
+			var task = _openRequests.GetTask(model.RequestId, _timeout);
+			await Socket.SendAsync(data, WebSocketMessageType.Binary, true, _cancelSource.Token);
+			var result = await task;
+			if (result.TimedOut)
+				return ProxyResult.FromError(500, "Request Timed out");
 
-				if (timeout.HasValue)
-				{
-					await Task.WhenAny(tcs.Task, Task.Delay(timeout.Value));
-					if (tcs.Task.IsCompleted)
-						return tcs.Task.Result;
-
-					return null;
-				}
-				else
-				{
-					return await tcs.Task;
-				}
-			}
-			finally
-			{
-				_openRequests.Remove(model.RequestId);
-			}
+			return ProxyResult.FromResponse(result.Result);
 		}
 
 		public async Task<IActionResult> SocketWaitLoop()
 		{
-			while (Socket.State.HasFlag(WebSocketState.Open) && _tokenSource.IsCancellationRequested == false)
+			var packetBuffer = new MemoryStream();
+			var buffer = new byte[_bufferSize];
+			
+			try
 			{
-				try
+				while (Socket.State.HasFlag(WebSocketState.Open) && _cancelSource.IsCancellationRequested == false)
 				{
-					var received = await Socket.ReceiveAsync(_buffer, _tokenSource.Token);
-					await _currentPacket.WriteAsync(_buffer, 0, received.Count);
+					var received = await Socket.ReceiveAsync(buffer, _cancelSource.Token);
+					await packetBuffer.WriteAsync(buffer, 0, received.Count);
 					if (received.EndOfMessage)
-						HandlePacketReceived();
-				}
-				catch (IOException)
-				{
-					break;
-				}
-				catch (TaskCanceledException)
-				{
-					break;
-				}
-				catch (Exception)
-				{
-					await Socket.CloseAsync(WebSocketCloseStatus.InternalServerError, "Unexpected exception occured", CancellationToken.None);
-					throw;
+					{
+						HandlePacketReceived(packetBuffer.ToArray());
+						packetBuffer.SetLength(0);
+					}
 				}
 			}
+			catch (Exception ex)
+			{
+				if (ex is not TaskCanceledException)
+					throw;	
+			}
+			finally
+			{
+				if (Socket.State == WebSocketState.Open)
+					await Socket.CloseAsync(WebSocketCloseStatus.InternalServerError, "Unexpected exception occured", CancellationToken.None);
 
-			if (Socket.State.HasFlag(WebSocketState.Open))
-				await Socket.CloseAsync(WebSocketCloseStatus.EndpointUnavailable, "Connection closed", CancellationToken.None);
+				packetBuffer.Dispose();
+			}
 
 			Dispose();
 			return new StatusCodeResult(200);
@@ -96,25 +73,25 @@ namespace AwoDevProxy.Api.Proxy
 
 		public void Close()
 		{
-			if (_tokenSource.IsCancellationRequested == false)
-				_tokenSource.Cancel();
+			if (_cancelSource.IsCancellationRequested == false)
+				_cancelSource.Cancel();
 		}
 
 		public void Dispose()
 		{
 			Socket.Dispose();
-			_currentPacket.Dispose();
 			SocketClosed?.Invoke(this);
 		}
 
-		public ProxyConnection(string path, WebSocket socket, int bufferSize = 2048)
+		public ProxyConnection(string path, WebSocket socket, TimeSpan requestTimeout, int bufferSize = 2048)
 		{
 			Name = path;
 			Socket = socket;
-			_buffer = new byte[bufferSize];
-			_tokenSource = new CancellationTokenSource();
+			_bufferSize = bufferSize;
+			_cancelSource = new CancellationTokenSource();
 			SocketTask = SocketWaitLoop();
-			_currentPacket = new MemoryStream();
+			_timeout = requestTimeout;
+			_openRequests = new TimedTaskHolder<Guid, ProxyResponseModel>();
 		}
 
 
