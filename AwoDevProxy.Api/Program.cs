@@ -24,9 +24,11 @@ if (app.Environment.IsDevelopment())
 }
 
 //app.UseHttpsRedirection();
+
+app.UseAuthentication();
 app.UseWebSockets();
 app.UseMiddleware<ProxyRootingMiddleware>();
 
-app.MapControllers();
+app.MapControllers().AllowAnonymous();
 
 app.Run();
