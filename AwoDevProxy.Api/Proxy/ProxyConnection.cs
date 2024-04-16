@@ -1,5 +1,4 @@
-﻿using AwoDevProxy.Api.Utils;
-using AwoDevProxy.Shared;
+﻿using AwoDevProxy.Shared;
 using AwoDevProxy.Shared.Messages;
 using AwoDevProxy.Shared.Proxy;
 using AwoDevProxy.Shared.Utils;
@@ -130,8 +129,7 @@ namespace AwoDevProxy.Api.Proxy
 					var received = await Socket.ReceiveAsync(buffer, _cancelSource.Token);
 					if (received.MessageType == WebSocketMessageType.Close)
 						break;
-
-
+				
 					await packetBuffer.WriteAsync(buffer, 0, received.Count);
 					if (received.EndOfMessage)
 					{
@@ -170,7 +168,7 @@ namespace AwoDevProxy.Api.Proxy
 			SocketClosed?.Invoke(this);
 		}
 
-		public ProxyConnection(RecyclableMemoryStreamManager streamPool, string name, WebSocket socket, TimeSpan requestTimeout, int bufferSize = 2048)
+		public ProxyConnection(RecyclableMemoryStreamManager streamPool, string name, WebSocket socket, TimeSpan requestTimeout, int bufferSize = 4096)
 		{
 			Name = name;
 			Socket = socket;
@@ -179,6 +177,8 @@ namespace AwoDevProxy.Api.Proxy
 			SocketTask = SocketWaitLoop();
 			_timeout = requestTimeout;
 			_openRequests = new TimedTaskHolder<Guid, ProxyHttpResponse>();
+			_openWebsockets = new TimedTaskHolder<Guid, ProxyWebSocketOpenAck>();
+			_webSocketProxies = new Dictionary<Guid, WebSocketProxy>();
 			_streamManager = streamPool;
 		}
 

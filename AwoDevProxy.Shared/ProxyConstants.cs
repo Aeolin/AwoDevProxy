@@ -9,7 +9,7 @@ namespace AwoDevProxy.Shared
 {
 	public static class ProxyConstants
 	{
-		public static readonly FrozenSet<string> HEADER_BLACKLIST = FrozenSet.ToFrozenSet(["transfer-encoding", "connection", "cache-control", "host"]);
+		public static readonly FrozenSet<string> HEADER_BLACKLIST = FrozenSet.ToFrozenSet(["transfer-encoding", "cache-control", "host"]);
 
 	}
 }

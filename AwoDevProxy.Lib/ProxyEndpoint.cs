@@ -78,9 +78,10 @@ namespace AwoDevProxy.Lib
 
 		private async Task SendPacketAsync(object packet)
 		{
-			using var mem = _streamManager.GetStream();
+			var mem = _streamManager.GetStream();	
 			PacketSerializer.Serialize<MessageType>(packet, (IBufferWriter<byte>)mem);
 			await _webSocket.SendAsync(mem.GetReadOnlySequence(), _cancelToken.Token);
+			await mem.DisposeAsync();
 		}
 
 		private async Task Handle_WebSocketClose_Async(ProxyWebSocketClose request)
@@ -159,7 +160,7 @@ namespace AwoDevProxy.Lib
 				connected = true;
 				_logger?.LogInformation("Connected to ProxyServer");
 				_tasks.Add(_webSocket.ReceiveAsync(_buffer, _cancelToken.Token));
-				while (_webSocket.State.HasFlag(WebSocketState.Open) && _cancelToken.IsCancellationRequested == false)
+				while (_webSocket.State.HasFlag(WebSocketState.Open) && _cancelToken.IsCancellationRequested == false && _tasks.Count > 0)
 				{
 					var any = await Task.WhenAny(_tasks);
 					_tasks.Remove(any);
@@ -176,6 +177,7 @@ namespace AwoDevProxy.Lib
 							{
 								_currentPacket.Position = 0;
 								await HandlePacketAsync(_currentPacket);
+								_tasks.Add(_webSocket.ReceiveAsync(_buffer, _cancelToken.Token));
 							}
 							catch (Exception ex)
 							{

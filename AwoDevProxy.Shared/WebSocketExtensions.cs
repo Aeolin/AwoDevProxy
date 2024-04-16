@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace AwoDevProxy.Shared
 {
@@ -43,9 +44,18 @@ namespace AwoDevProxy.Shared
 			}
 			else
 			{
-				SequencePosition pos = default;
+				
+				SequencePosition pos = seq.Start;
+				//List<ReadOnlyMemory<byte>> frames = new List<ReadOnlyMemory<byte>>();
+				//foreach (var memory in seq)
+				//	frames.Add(memory);
+
+				long countWritten = 0;
 				while (seq.TryGet(ref pos, out var memory, true) && token.IsCancellationRequested == false)
-					await webSocket.SendAsync(memory, WebSocketMessageType.Binary, seq.End.Equals(pos), token);
+				{
+					countWritten += memory.Length;
+					await webSocket.SendAsync(memory, WebSocketMessageType.Binary, countWritten == seq.Length, token);
+				}
 			}
 		}
 	}
