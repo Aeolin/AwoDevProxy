@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace AwoDevProxy.Lib
 {
@@ -137,7 +138,7 @@ namespace AwoDevProxy.Lib
 		public async Task RunAsync(CancellationTokenSource cts)
 		{
 			_cancelToken = cts ?? new CancellationTokenSource();
-			var uri = new Uri($"{Config.ProxyServer}/ws/{Config.Name}?authKey={Config.AuthKey}");
+			var uri = new Uri($"{Config.ProxyServer}/ws/{Config.Name}?authKey={HttpUtility.UrlEncode(Config.AuthKey)}");
 			int retryCount = 0;
 			do
 			{

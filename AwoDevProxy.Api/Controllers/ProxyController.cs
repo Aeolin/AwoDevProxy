@@ -22,7 +22,7 @@ namespace AwoDevProxy.Api.Controllers
 				return BadRequest();
 
 			if (_config.FixedKey != null && _config.FixedKey.Equals(authKey) == false)
-				return Forbid();
+				return StatusCode(StatusCodes.Status403Forbidden, "wrong key");
 
 			var exists = await _manager.IsProxyAvailableAsync(name);
 			if (force == false && exists)
