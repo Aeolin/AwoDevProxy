@@ -62,9 +62,14 @@ namespace AwoDevProxy.Api.Proxy
 				while (Socket.State.HasFlag(WebSocketState.Open) && _cancelSource.IsCancellationRequested == false)
 				{
 					var received = await Socket.ReceiveAsync(buffer, _cancelSource.Token);
+					if (received.MessageType == WebSocketMessageType.Close)
+						break;
+					
+
 					await packetBuffer.WriteAsync(buffer, 0, received.Count);
 					if (received.EndOfMessage)
 					{
+						packetBuffer.Position = 0;
 						HandlePacketReceived(packetBuffer);
 						packetBuffer.SetLength(0);
 					}

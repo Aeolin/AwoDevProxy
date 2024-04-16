@@ -90,10 +90,21 @@ namespace AwoDevProxy.Lib
 				while (_webSocket.State.HasFlag(WebSocketState.Open) && _cancelToken.IsCancellationRequested == false)
 				{
 					var received = await _webSocket.ReceiveAsync(_buffer, _cancelToken.Token);
+					if (received.MessageType == WebSocketMessageType.Close)
+						return true;
+
 					_currentPacket.Write(_buffer, 0, received.Count);
 					if (received.EndOfMessage)
 					{
-						await HandlePacketAsync(_currentPacket);
+						try
+						{
+							_currentPacket.Position = 0;
+							await HandlePacketAsync(_currentPacket);
+						}
+						catch (Exception ex)
+						{
+							_logger.LogError(ex, "Error handling packet");
+						}
 						_currentPacket.SetLength(0);
 					}
 				}
