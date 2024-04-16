@@ -1,4 +1,6 @@
 ﻿using AwoDevProxy.Shared;
+using AwoDevProxy.Shared.Messages;
+using AwoDevProxy.Shared.Proxy;
 using MessagePack;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
@@ -84,15 +86,34 @@ namespace AwoDevProxy.Api.Proxy
 		{
 			if (_connections.TryGetValue(id, out var connection))
 			{
-				var request = await ProxyUtils.ConstructProxyRequestAsync(context.Request);
-				var result = await connection.HandleHttpRequestAsync(request);
-				if (result.Success)
+				if (context.WebSockets.IsWebSocketRequest)
 				{
-					await ProxyUtils.WriteResponseToPipelineAsync(result.Response, context.Response);
+					var request = new ProxyWebSocketOpen { PathAndQuery = context.Request.GetEncodedPathAndQuery(), Protocol = context.Request.Scheme };
+					var result = await connection.OpenWebSocketProxyAsync(request);
+					if (result.Success)
+					{
+						var socket = await context.WebSockets.AcceptWebSocketAsync();
+						var proxy = new WebSocketProxy(request.SocketId, socket);
+						await connection.HandleWebSocketProxyAsync(proxy);
+						await ProxyUtils.WriteResultAsync(200, context.Response);
+					}
+					else
+					{
+						await ProxyUtils.WriteErrorAsync(result.Error, context.Response);
+					}
 				}
 				else
 				{
-					await ProxyUtils.WriteErrorAsync(result.Error, context.Response);
+					var request = await ProxyUtils.ConstructProxyRequestAsync(context.Request);
+					var result = await connection.HandleHttpRequestAsync(request);
+					if (result.Success)
+					{
+						await ProxyUtils.WriteResponseToPipelineAsync(result.Response, context.Response);
+					}
+					else
+					{
+						await ProxyUtils.WriteErrorAsync(result.Error, context.Response);
+					}
 				}
 
 				return true;

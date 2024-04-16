@@ -47,5 +47,11 @@ namespace AwoDevProxy.Api.Proxy
 				await response.BodyWriter.CompleteAsync();
 
 		}
+
+		internal static async Task WriteResultAsync(int statusCode, HttpResponse response)
+		{
+			response.StatusCode = statusCode;
+			await response.CompleteAsync();
+		}
 	}
 }

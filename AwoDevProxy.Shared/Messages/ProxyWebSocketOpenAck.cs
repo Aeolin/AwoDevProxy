@@ -1,27 +1,26 @@
 ﻿using MessagePack;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Contracts;
 using System.Linq;
-using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace AwoDevProxy.Shared.Messages
 {
 	[MessagePackObject]
-	public class ProxyWebSocketData
+	[PacketType<MessageType>(MessageType.WebSocketOpenAck)]
+	public class ProxyWebSocketOpenAck
 	{
 		[Key(0)]
 		public Guid SocketId { get; set; }
 
 		[Key(1)]
-		public WebSocketMessageType MessageType { get; set; }
+		public bool Success { get; set; }
 
 		[Key(2)]
-		public bool EndOfMessage { get; set; }
+		public int ResponseCode { get; set; }
 
 		[Key(3)]
-		public byte[] Data { get; set; }
+		public string ErrorMessage { get; set; }
 	}
 }

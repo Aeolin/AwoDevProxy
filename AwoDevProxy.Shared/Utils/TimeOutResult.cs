@@ -1,4 +1,4 @@
-﻿namespace AwoDevProxy.Api.Utils
+﻿namespace AwoDevProxy.Shared.Utils
 {
 	public static class TimeOutResult
 	{

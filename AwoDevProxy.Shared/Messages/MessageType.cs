@@ -15,6 +15,7 @@ namespace AwoDevProxy.Shared.Messages
 		HttpResponse = 2,
 		WebSocketOpen = 3,
 		WebSocketData = 4,
-		WebSocketClose = 5
+		WebSocketClose = 5,
+		WebSocketOpenAck = 6
 	}
 }

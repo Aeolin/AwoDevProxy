@@ -1,11 +1,14 @@
 ﻿using AwoDevProxy.Api.Utils;
 using AwoDevProxy.Shared;
 using AwoDevProxy.Shared.Messages;
+using AwoDevProxy.Shared.Proxy;
+using AwoDevProxy.Shared.Utils;
 using MessagePack;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IO;
 using System.Buffers;
 using System.Net.WebSockets;
+using System.Reflection;
 
 namespace AwoDevProxy.Api.Proxy
 {
@@ -19,22 +22,85 @@ namespace AwoDevProxy.Api.Proxy
 		private readonly CancellationTokenSource _cancelSource;
 		private readonly TimeSpan _timeout;
 		private readonly TimedTaskHolder<Guid, ProxyHttpResponse> _openRequests;
+		private readonly TimedTaskHolder<Guid, ProxyWebSocketOpenAck> _openWebsockets;
+		private readonly Dictionary<Guid, WebSocketProxy> _webSocketProxies;
+
 		private readonly RecyclableMemoryStreamManager _streamManager;
 
 		public event Action<ProxyConnection> SocketClosed;
 
 
-		private void HandlePacketReceived(Stream stream)
+		private async void HandlePacketReceived(Stream stream)
 		{
-			var data = PacketSerializer.Deserialize<MessageType>(stream, out var key);
+			var packet = PacketSerializer.Deserialize<MessageType>(stream, out var key);
 			switch (key)
 			{
 				case MessageType.HttpResponse:
-					var response = (ProxyHttpResponse)data;
+					var response = (ProxyHttpResponse)packet;
 					_openRequests.SetResult(response.RequestId, response);
 					break;
 
+				case MessageType.WebSocketOpenAck:
+					var open = (ProxyWebSocketOpenAck)packet;
+					_openWebsockets.SetResult(open.SocketId, open);
+					break;
+
+				case MessageType.WebSocketData:
+					{
+						var data = (ProxyWebSocketData)packet;
+						if (_webSocketProxies.TryGetValue(data.SocketId, out var proxy))
+						{
+							if (data.MessageType == WebSocketMessageType.Close)
+								await proxy.CloseAsync();
+							else
+								await proxy.SendAsync(data);
+						}
+						
+						break;
+					}
+
+				case MessageType.WebSocketClose:
+					{
+						var close = (ProxyWebSocketClose)packet;
+						if (_webSocketProxies.TryGetValue(close.SocketId, out var proxy))
+							await proxy.CloseAsync();
+						
+						break;
+					}
 			}
+		}
+
+		private async Task SendPacketAsync(object packet)
+		{
+			var stream = _streamManager.GetStream();
+			PacketSerializer.Serialize<MessageType>(packet, (IBufferWriter<byte>)stream);
+			await Socket.SendAsync(stream.GetReadOnlySequence(), _cancelSource.Token);
+			await stream.DisposeAsync();
+		}
+
+		public async Task<IActionResult> HandleWebSocketProxyAsync(WebSocketProxy proxy)
+		{
+			_webSocketProxies.Add(proxy.Id, proxy);
+			while (proxy.IsOpen)
+			{
+				var read = await proxy.ReadAsync();
+				await SendPacketAsync(read);
+			}
+
+			_webSocketProxies.Remove(proxy.Id);
+			return new StatusCodeResult(StatusCodes.Status200OK);
+		}
+
+		public async Task<WebSocketResult> OpenWebSocketProxyAsync(ProxyWebSocketOpen model)
+		{
+			var task = _openWebsockets.GetTask(model.SocketId, _timeout);
+			await SendPacketAsync(model);
+			var result = await task;
+
+			if (result.TimedOut)
+				return WebSocketResult.FromError(500, "Request Timed out");
+
+			return WebSocketResult.FromResponse(result.Result);
 		}
 
 		public async Task<ProxyResult> HandleHttpRequestAsync(ProxyHttpRequest model)
@@ -64,7 +130,7 @@ namespace AwoDevProxy.Api.Proxy
 					var received = await Socket.ReceiveAsync(buffer, _cancelSource.Token);
 					if (received.MessageType == WebSocketMessageType.Close)
 						break;
-					
+
 
 					await packetBuffer.WriteAsync(buffer, 0, received.Count);
 					if (received.EndOfMessage)

@@ -1,5 +1,6 @@
 ﻿using AwoDevProxy.Shared;
 using AwoDevProxy.Shared.Messages;
+using AwoDevProxy.Shared.Proxy;
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using Microsoft.IO;
@@ -24,11 +25,13 @@ namespace AwoDevProxy.Lib
 		public ProxyEndpointConfig Config { get; init; }
 		private CancellationTokenSource _cancelToken;
 		private RecyclableMemoryStreamManager _streamManager;
+		private Dictionary<Guid, WebSocketProxy> _webSocketProxies;
 		private ClientWebSocket _webSocket;
 		private readonly byte[] _buffer;
 		private readonly MemoryStream _currentPacket;
 		private const int RECONNECT_DELAY = 5;
 		private const int MAX_RECCONECT_DELAY = 60;
+		private List<Task> _tasks;
 		private ILogger _logger;
 
 		public ProxyEndpoint(ProxyEndpointConfig config, ILoggerFactory factory = null, RecyclableMemoryStreamManager manager = null)
@@ -39,6 +42,8 @@ namespace AwoDevProxy.Lib
 			_currentPacket = new MemoryStream();
 			_logger = factory?.CreateLogger<ProxyEndpoint>();
 			_streamManager=manager ?? new RecyclableMemoryStreamManager();
+			_webSocketProxies = new Dictionary<Guid, WebSocketProxy>();
+			_tasks = new List<Task>();
 		}
 
 
@@ -51,13 +56,79 @@ namespace AwoDevProxy.Lib
 				case MessageType.HttpRequest:
 					result = await Handle_HttpRequest_Async((ProxyHttpRequest)packet);
 					break;
+
+				case MessageType.WebSocketOpen:
+					result = await Handle_WebSocketOpen_Async((ProxyWebSocketOpen)packet);
+					break;
+
+				case MessageType.WebSocketData:
+					await Handle_WebSocketData_Async((ProxyWebSocketData)packet);
+					break;
+
+				case MessageType.WebSocketClose:
+					await Handle_WebSocketClose_Async((ProxyWebSocketClose)packet);
+					break;
 			}
 
 			if (result != null)
+				await SendPacketAsync(result);
+		}
+
+
+
+		private async Task SendPacketAsync(object packet)
+		{
+			using var mem = _streamManager.GetStream();
+			PacketSerializer.Serialize<MessageType>(packet, (IBufferWriter<byte>)mem);
+			await _webSocket.SendAsync(mem.GetReadOnlySequence(), _cancelToken.Token);
+		}
+
+		private async Task Handle_WebSocketClose_Async(ProxyWebSocketClose request)
+		{
+			if (_webSocketProxies.TryGetValue(request.SocketId, out var proxy))
 			{
-				using var mem = _streamManager.GetStream();
-				PacketSerializer.Serialize<MessageType>(result, (IBufferWriter<byte>)mem);
-				await _webSocket.SendAsync(mem.GetReadOnlySequence(), _cancelToken.Token);
+				await proxy.CloseAsync();
+				_webSocketProxies.Remove(proxy.Id);
+			}
+		}
+
+		private async Task Handle_WebSocketData_Async(ProxyWebSocketData request)
+		{
+			if (_webSocketProxies.TryGetValue(request.SocketId, out var proxy))
+			{
+				if (request.MessageType == WebSocketMessageType.Close)
+				{
+					await proxy.CloseAsync();
+					_webSocketProxies.Remove(proxy.Id);
+				}
+				else
+				{
+					await proxy.SendAsync(request);
+				}
+			}
+		}
+
+		private async Task<ProxyWebSocketOpenAck> Handle_WebSocketOpen_Async(ProxyWebSocketOpen request)
+		{
+			var client = new ClientWebSocket();
+			var url = $"{Config.LocalAddress}/{request.PathAndQuery}";
+			var index = url.IndexOf("://");
+			url = $"{request.Protocol}{url.Substring(index)}";
+			var cts = new CancellationTokenSource();
+
+			try
+			{
+				await client.ConnectAsync(new Uri(url), cts.Token);
+				var proxy = new WebSocketProxy(request.SocketId, client, cts);
+				_webSocketProxies.Add(request.SocketId, proxy);
+				_tasks.Add(proxy.ReadAsync());
+				_logger.LogInformation($"Established websocket proxy with id[{request.SocketId}] for {request.PathAndQuery}");
+				return new ProxyWebSocketOpenAck { SocketId = request.SocketId, Success = true };
+			}
+			catch (Exception ex)
+			{
+				_logger?.LogError(ex, "error opening websocket proxy");
+				return new ProxyWebSocketOpenAck { SocketId = request.SocketId, Success = false, ResponseCode = 500, ErrorMessage = ex.Message };
 			}
 		}
 
@@ -87,25 +158,37 @@ namespace AwoDevProxy.Lib
 				await _webSocket.ConnectAsync(uri, _cancelToken.Token);
 				connected = true;
 				_logger?.LogInformation("Connected to ProxyServer");
+				_tasks.Add(_webSocket.ReceiveAsync(_buffer, _cancelToken.Token));
 				while (_webSocket.State.HasFlag(WebSocketState.Open) && _cancelToken.IsCancellationRequested == false)
 				{
-					var received = await _webSocket.ReceiveAsync(_buffer, _cancelToken.Token);
-					if (received.MessageType == WebSocketMessageType.Close)
-						return true;
-
-					_currentPacket.Write(_buffer, 0, received.Count);
-					if (received.EndOfMessage)
+					var any = await Task.WhenAny(_tasks);
+					_tasks.Remove(any);
+					if (any is Task<WebSocketReceiveResult> readTask)
 					{
-						try
+						var received = readTask.Result; //await _webSocket.ReceiveAsync(_buffer, _cancelToken.Token);
+						if (received.MessageType == WebSocketMessageType.Close)
+							return true;
+
+						_currentPacket.Write(_buffer, 0, received.Count);
+						if (received.EndOfMessage)
 						{
-							_currentPacket.Position = 0;
-							await HandlePacketAsync(_currentPacket);
+							try
+							{
+								_currentPacket.Position = 0;
+								await HandlePacketAsync(_currentPacket);
+							}
+							catch (Exception ex)
+							{
+								_logger.LogError(ex, "Error handling packet");
+							}
+							_currentPacket.SetLength(0);
 						}
-						catch (Exception ex)
-						{
-							_logger.LogError(ex, "Error handling packet");
-						}
-						_currentPacket.SetLength(0);
+					}
+					else if (any is Task<ProxyWebSocketData> dataTask)
+					{
+						await SendPacketAsync(dataTask.Result);
+						if (_webSocketProxies.TryGetValue(dataTask.Result.SocketId, out var socket))
+							_tasks.Add(socket.ReadAsync());
 					}
 				}
 
@@ -125,6 +208,12 @@ namespace AwoDevProxy.Lib
 		{
 			if (_webSocket != null && _webSocket.State.HasFlag(WebSocketState.Open))
 				await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
+
+			foreach (var proxy in _webSocketProxies.Values)
+				await proxy.CloseAsync();
+
+			_webSocketProxies.Clear();
+			_tasks.Clear();
 		}
 
 		public async Task RunAsync(CancellationTokenSource cts)

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.ObjectPool;
 using System.Collections.Concurrent;
 
-namespace AwoDevProxy.Api.Utils
+namespace AwoDevProxy.Shared.Utils
 {
 	public class TimedTaskHolder<TKey, TResult>
 	{
