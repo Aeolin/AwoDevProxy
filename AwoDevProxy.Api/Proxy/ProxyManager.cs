@@ -3,6 +3,7 @@ using MessagePack;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.ObjectPool;
+using Microsoft.IO;
 using System.Net.WebSockets;
 using System.Text;
 
@@ -12,6 +13,13 @@ namespace AwoDevProxy.Api.Proxy
 	{
 		private readonly Dictionary<string, ProxyConnection> _connections = new Dictionary<string, ProxyConnection>();
 		private readonly ProxyConfig _config;
+		private readonly RecyclableMemoryStreamManager _streamManager;
+
+		public ProxyManager(ProxyConfig config, RecyclableMemoryStreamManager streamManager)
+		{
+			_config=config;
+			_streamManager=streamManager;
+		}
 
 		public bool ProxyExists(string name)
 		{
@@ -48,7 +56,7 @@ namespace AwoDevProxy.Api.Proxy
 				_connections.Remove(proxyName);
 			}
 
-			proxyConnection = new ProxyConnection(proxyName, socket, requestTimeout);
+			proxyConnection = new ProxyConnection(_streamManager, proxyName, socket, requestTimeout);
 			AddProxy(proxyConnection);
 			return proxyConnection.SocketTask;
 		}
@@ -77,7 +85,7 @@ namespace AwoDevProxy.Api.Proxy
 			if (_connections.TryGetValue(id, out var connection))
 			{
 				var request = await ProxyUtils.ConstructProxyRequestAsync(context.Request);
-				var result = await connection.HandleRequestAsync(request);
+				var result = await connection.HandleHttpRequestAsync(request);
 				if (result.Success)
 				{
 					await ProxyUtils.WriteResponseToPipelineAsync(result.Response, context.Response);

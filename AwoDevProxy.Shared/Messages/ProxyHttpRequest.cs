@@ -5,10 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AwoDevProxy.Shared
+namespace AwoDevProxy.Shared.Messages
 {
 	[MessagePackObject]
-	public class ProxyRequestModel
+	[PacketType<MessageType>(MessageType.HttpRequest)]
+	public class ProxyHttpRequest
 	{
 		[Key(0)]
 		public Guid RequestId { get; set; } = Guid.NewGuid();

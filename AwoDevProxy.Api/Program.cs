@@ -1,6 +1,7 @@
 using AwoDevProxy.Api.Middleware;
 using AwoDevProxy.Api.Proxy;
 using Microsoft.Extensions.Configuration;
+using Microsoft.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
@@ -12,11 +13,14 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton(config.GetSection("ProxyConfig").Get<ProxyConfig>());
+builder.Services.AddSingleton<RecyclableMemoryStreamManager>();
 builder.Services.AddSingleton<IProxyManager, ProxyManager>();
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseMiddleware<ProxyRootingMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
 	app.UseSwagger();
@@ -26,7 +30,6 @@ if (app.Environment.IsDevelopment())
 //app.UseHttpsRedirection();
 
 app.UseWebSockets();
-app.UseMiddleware<ProxyRootingMiddleware>();
 
 app.MapControllers();
 
