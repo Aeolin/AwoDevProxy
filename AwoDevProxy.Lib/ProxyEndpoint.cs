@@ -1,6 +1,7 @@
 ﻿using AwoDevProxy.Shared;
 using AwoDevProxy.Shared.Messages;
 using AwoDevProxy.Shared.Proxy;
+using AwoDevProxy.Shared.Utils.Tasks;
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using Microsoft.IO;
@@ -19,31 +20,43 @@ using System.Web;
 
 namespace AwoDevProxy.Lib
 {
-	public class ProxyEndpoint
+	public partial class ProxyEndpoint
 	{
 		private readonly HttpClient _http;
 		public ProxyEndpointConfig Config { get; init; }
 		private CancellationTokenSource _cancelToken;
 		private RecyclableMemoryStreamManager _streamManager;
-		private Dictionary<Guid, WebSocketProxy> _webSocketProxies;
+		private TaskManager _taskManager;
 		private ClientWebSocket _webSocket;
-		private readonly byte[] _buffer;
-		private readonly MemoryStream _currentPacket;
+		private ILogger _logger;
+
 		private const int RECONNECT_DELAY = 5;
 		private const int MAX_RECCONECT_DELAY = 60;
-		private List<Task> _tasks;
-		private ILogger _logger;
 
 		public ProxyEndpoint(ProxyEndpointConfig config, ILoggerFactory factory = null, RecyclableMemoryStreamManager manager = null)
 		{
 			Config = config;
 			_http = new HttpClient() { BaseAddress = new Uri(config.LocalAddress) };
 			_buffer = new byte[config.BufferSize];
-			_currentPacket = new MemoryStream();
 			_logger = factory?.CreateLogger<ProxyEndpoint>();
 			_streamManager=manager ?? new RecyclableMemoryStreamManager();
 			_webSocketProxies = new Dictionary<Guid, WebSocketProxy>();
-			_tasks = new List<Task>();
+			_taskManager = new TaskManager();
+			SetupTasks(_taskManager);
+		}
+
+		private void SetupTasks(TaskManager manager)
+		{
+			manager.WithTaskSource<ClientWebSocket, WebSocketReceiveResult>(GetTask_Client, opts =>
+			{
+				opts.HandleResult(Handle_Client_ReadResultAsync);
+				opts.HandleException<TaskCanceledException>(Handle_Client_TaskCancelledException);
+			});
+
+			manager.WithTaskSource<WebSocketProxy, WebSocketProxyReadResult>(GetTask_WebSocket, opts =>
+			{
+				opts.HandleResult(Handle_WebSocket_ReadResultAsync);
+			});
 		}
 
 
@@ -54,19 +67,19 @@ namespace AwoDevProxy.Lib
 			switch (type)
 			{
 				case MessageType.HttpRequest:
-					result = await Handle_HttpRequest_Async((ProxyHttpRequest)packet);
+					result = await Handle_Client_HttpRequestAsync((ProxyHttpRequest)packet);
 					break;
 
 				case MessageType.WebSocketOpen:
-					result = await Handle_WebSocketOpen_Async((ProxyWebSocketOpen)packet);
+					result = await Handle_WebSocket_OpenAsync((ProxyWebSocketOpen)packet);
 					break;
 
 				case MessageType.WebSocketData:
-					await Handle_WebSocketData_Async((ProxyWebSocketData)packet);
+					await Handle_WebSocket_DataAsync((ProxyWebSocketData)packet);
 					break;
 
 				case MessageType.WebSocketClose:
-					await Handle_WebSocketClose_Async((ProxyWebSocketClose)packet);
+					await Handle_WebSocket_CloseAsync((ProxyWebSocketClose)packet);
 					break;
 			}
 
@@ -74,80 +87,12 @@ namespace AwoDevProxy.Lib
 				await SendPacketAsync(result);
 		}
 
-
-
 		private async Task SendPacketAsync(object packet)
 		{
-			var mem = _streamManager.GetStream();	
+			var mem = _streamManager.GetStream();
 			PacketSerializer.Serialize<MessageType>(packet, (IBufferWriter<byte>)mem);
 			await _webSocket.SendAsync(mem.GetReadOnlySequence(), _cancelToken.Token);
 			await mem.DisposeAsync();
-		}
-
-		private async Task Handle_WebSocketClose_Async(ProxyWebSocketClose request)
-		{
-			if (_webSocketProxies.TryGetValue(request.SocketId, out var proxy))
-			{
-				await proxy.CloseAsync();
-				_webSocketProxies.Remove(proxy.Id);
-			}
-		}
-
-		private async Task Handle_WebSocketData_Async(ProxyWebSocketData request)
-		{
-			if (_webSocketProxies.TryGetValue(request.SocketId, out var proxy))
-			{
-				if (request.MessageType == WebSocketMessageType.Close)
-				{
-					await proxy.CloseAsync();
-					_webSocketProxies.Remove(proxy.Id);
-				}
-				else
-				{
-					await proxy.SendAsync(request);
-				}
-			}
-		}
-
-		private async Task<ProxyWebSocketOpenAck> Handle_WebSocketOpen_Async(ProxyWebSocketOpen request)
-		{
-			var client = new ClientWebSocket();
-			var url = $"{Config.LocalAddress}/{request.PathAndQuery}";
-			var index = url.IndexOf("://");
-			url = $"{request.Protocol}{url.Substring(index)}";
-			var cts = new CancellationTokenSource();
-
-			try
-			{
-				await client.ConnectAsync(new Uri(url), cts.Token);
-				var proxy = new WebSocketProxy(request.SocketId, client, cts);
-				_webSocketProxies.Add(request.SocketId, proxy);
-				_tasks.Add(proxy.ReadAsync());
-				_logger.LogInformation($"Established websocket proxy with id[{request.SocketId}] for {request.PathAndQuery}");
-				return new ProxyWebSocketOpenAck { SocketId = request.SocketId, Success = true };
-			}
-			catch (Exception ex)
-			{
-				_logger?.LogError(ex, "error opening websocket proxy");
-				return new ProxyWebSocketOpenAck { SocketId = request.SocketId, Success = false, ResponseCode = 500, ErrorMessage = ex.Message };
-			}
-		}
-
-		private async Task<ProxyHttpResponse> Handle_HttpRequest_Async(ProxyHttpRequest request)
-		{
-			try
-			{
-				var httpRequest = ProxyUtils.CreateRequestFromProxy(request);
-				var response = await _http.SendAsync(httpRequest);
-				var proxyResponse = await ProxyUtils.CreateResponseFromHttpAsync(response, request.RequestId);
-				_logger?.LogInformation($"Handeled request for {request.PathAndQuery}, response: {response.StatusCode}");
-				return proxyResponse;
-			}
-			catch (Exception ex)
-			{
-				_logger?.LogError(ex, $"Error handling Request[{request.RequestId}] for {request.PathAndQuery}");
-				return ProxyUtils.CreateResponseFromError(500, ex.ToString(), request.RequestId);
-			}
 		}
 
 		private async Task<bool> TryRunAsync(Uri uri)
@@ -159,42 +104,13 @@ namespace AwoDevProxy.Lib
 				await _webSocket.ConnectAsync(uri, _cancelToken.Token);
 				connected = true;
 				_logger?.LogInformation("Connected to ProxyServer");
-				_tasks.Add(_webSocket.ReceiveAsync(_buffer, _cancelToken.Token));
-				while (_webSocket.State.HasFlag(WebSocketState.Open) && _cancelToken.IsCancellationRequested == false && _tasks.Count > 0)
-				{
-					var any = await Task.WhenAny(_tasks);
-					_tasks.Remove(any);
-					if (any is Task<WebSocketReceiveResult> readTask)
-					{
-						var received = readTask.Result; //await _webSocket.ReceiveAsync(_buffer, _cancelToken.Token);
-						if (received.MessageType == WebSocketMessageType.Close)
-							return true;
-
-						_currentPacket.Write(_buffer, 0, received.Count);
-						if (received.EndOfMessage)
-						{
-							try
-							{
-								_currentPacket.Position = 0;
-								await HandlePacketAsync(_currentPacket);
-								_tasks.Add(_webSocket.ReceiveAsync(_buffer, _cancelToken.Token));
-							}
-							catch (Exception ex)
-							{
-								_logger.LogError(ex, "Error handling packet");
-							}
-							_currentPacket.SetLength(0);
-						}
-					}
-					else if (any is Task<ProxyWebSocketData> dataTask)
-					{
-						await SendPacketAsync(dataTask.Result);
-						if (_webSocketProxies.TryGetValue(dataTask.Result.SocketId, out var socket))
-							_tasks.Add(socket.ReadAsync());
-					}
-				}
-
+				_taskManager.SubmitSource(_webSocket);
+				while (await _taskManager.AwaitNextTask()) ;
 				return true;
+			}
+			catch (TaskCanceledException)
+			{
+				return connected;
 			}
 			catch (Exception ex)
 			{
@@ -208,6 +124,7 @@ namespace AwoDevProxy.Lib
 
 		public async Task DisposeAsync()
 		{
+			_taskManager.Stop();
 			if (_webSocket != null && _webSocket.State.HasFlag(WebSocketState.Open))
 				await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
 
@@ -215,7 +132,6 @@ namespace AwoDevProxy.Lib
 				await proxy.CloseAsync();
 
 			_webSocketProxies.Clear();
-			_tasks.Clear();
 		}
 
 		public async Task RunAsync(CancellationTokenSource cts)

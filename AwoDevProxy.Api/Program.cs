@@ -19,6 +19,7 @@ builder.Services.AddSingleton<IProxyManager, ProxyManager>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseWebSockets();
 app.UseMiddleware<ProxyRootingMiddleware>();
 
 if (app.Environment.IsDevelopment())
@@ -27,10 +28,5 @@ if (app.Environment.IsDevelopment())
 	app.UseSwaggerUI();
 }
 
-//app.UseHttpsRedirection();
-
-app.UseWebSockets();
-
 app.MapControllers();
-
 app.Run();

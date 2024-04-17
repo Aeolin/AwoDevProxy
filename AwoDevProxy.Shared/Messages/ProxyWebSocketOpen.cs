@@ -18,6 +18,9 @@ namespace AwoDevProxy.Shared.Messages
 		public string PathAndQuery { get; set; }
 
 		[Key(2)]
-		public string Protocol { get; set; }
+		public bool Secure { get; set; }
+
+		[IgnoreMember]
+		public string Scheme => Secure ? "wss" : "ws";
 	}
 }

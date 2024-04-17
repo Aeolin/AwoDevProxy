@@ -88,14 +88,13 @@ namespace AwoDevProxy.Api.Proxy
 			{
 				if (context.WebSockets.IsWebSocketRequest)
 				{
-					var request = new ProxyWebSocketOpen { PathAndQuery = context.Request.GetEncodedPathAndQuery(), Protocol = context.Request.Scheme };
+					var request = new ProxyWebSocketOpen { PathAndQuery = context.Request.GetEncodedPathAndQuery(), Secure = context.Request.IsHttps };
 					var result = await connection.OpenWebSocketProxyAsync(request);
 					if (result.Success)
 					{
 						var socket = await context.WebSockets.AcceptWebSocketAsync();
 						var proxy = new WebSocketProxy(request.SocketId, socket);
 						await connection.HandleWebSocketProxyAsync(proxy);
-						await ProxyUtils.WriteResultAsync(200, context.Response);
 					}
 					else
 					{

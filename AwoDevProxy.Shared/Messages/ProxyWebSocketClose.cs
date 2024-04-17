@@ -11,6 +11,7 @@ namespace AwoDevProxy.Shared.Messages
 	[PacketType<MessageType>(MessageType.WebSocketClose)]
 	public class ProxyWebSocketClose
 	{
+		[Key(0)]
 		public Guid SocketId { get; set; }
 	}
 }

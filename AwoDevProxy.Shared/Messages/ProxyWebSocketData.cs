@@ -1,4 +1,5 @@
-﻿using MessagePack;
+﻿using AwoDevProxy.Shared.Utils;
+using MessagePack;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 namespace AwoDevProxy.Shared.Messages
 {
 	[MessagePackObject]
+	[PacketType<MessageType>(Messages.MessageType.WebSocketData)]
 	public class ProxyWebSocketData
 	{
 		[Key(0)]
@@ -21,7 +23,7 @@ namespace AwoDevProxy.Shared.Messages
 		[Key(2)]
 		public bool EndOfMessage { get; set; }
 
-		[Key(3)]
-		public byte[] Data { get; set; }
+		[Key(3)]	
+		public ArraySegment<byte> Data { get; set; }
 	}
 }

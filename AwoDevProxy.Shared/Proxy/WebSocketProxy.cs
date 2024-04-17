@@ -7,7 +7,7 @@ namespace AwoDevProxy.Shared.Proxy
 	public class WebSocketProxy
 	{
 		public Guid Id { get; init; }
-		public bool IsOpen => _cts.IsCancellationRequested == false && _socket.State.HasFlag(WebSocketState.Open);
+		public bool IsOpen => _cts.IsCancellationRequested == false && _socket.State == WebSocketState.Open;
 
 		private CancellationTokenSource _cts;
 		private readonly WebSocket _socket;
@@ -26,18 +26,39 @@ namespace AwoDevProxy.Shared.Proxy
 			await _socket.SendAsync(data.Data, data.MessageType, data.EndOfMessage, _cts.Token);
 		}
 
-		public async Task<ProxyWebSocketData> ReadAsync()
+		public async Task<WebSocketProxyReadResult> ReadAsync()
 		{
-			var result = await _socket.ReceiveAsync(_buffer, _cts.Token);
-			var body = result.Count == _buffer.Length ? _buffer : _buffer.AsSpan().Slice(result.Count).ToArray();
-			var data = new ProxyWebSocketData { Data = body, EndOfMessage = result.EndOfMessage, MessageType = result.MessageType, SocketId = Id };
-			return data;
+			try
+			{
+				var result = await _socket.ReceiveAsync(_buffer, _cts.Token);
+				var body = new ArraySegment<byte>(_buffer, 0, result.Count);
+				var data = new ProxyWebSocketData { Data = body, EndOfMessage = result.EndOfMessage, MessageType = result.MessageType, SocketId = Id };
+				return WebSocketProxyReadResult.Result(Id, data);
+			}
+			catch (Exception)
+			{
+				if (_cts.IsCancellationRequested == false)
+					_cts.Cancel();
+
+				await CloseAsync();
+				return WebSocketProxyReadResult.Closed(Id);
+			}
 		}
 
 		public async Task CloseAsync()
 		{
-			_cts.Cancel();
-			await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
+			if (IsOpen)
+			{
+				_cts.Cancel(); 
+				try
+				{
+					await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
+				}
+				catch (WebSocketException)
+				{
+					// do nothing, somehow websocket first realises it's in the aborted state once CloseAsync get's called
+				}
+			}
 		}
 	}
 }

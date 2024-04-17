@@ -43,19 +43,13 @@ namespace AwoDevProxy.Shared
 				await webSocket.SendAsync(seq.First, WebSocketMessageType.Binary, true, token);
 			}
 			else
-			{
-				
-				SequencePosition pos = seq.Start;
-				//List<ReadOnlyMemory<byte>> frames = new List<ReadOnlyMemory<byte>>();
-				//foreach (var memory in seq)
-				//	frames.Add(memory);
-
+			{				
 				long countWritten = 0;
-				while (seq.TryGet(ref pos, out var memory, true) && token.IsCancellationRequested == false)
+				foreach(var memory in seq)
 				{
 					countWritten += memory.Length;
 					await webSocket.SendAsync(memory, WebSocketMessageType.Binary, countWritten == seq.Length, token);
-				}
+				}	
 			}
 		}
 	}

@@ -6,6 +6,7 @@ using MessagePack;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IO;
 using System.Buffers;
+using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Reflection;
 
@@ -54,7 +55,7 @@ namespace AwoDevProxy.Api.Proxy
 							else
 								await proxy.SendAsync(data);
 						}
-						
+
 						break;
 					}
 
@@ -63,7 +64,7 @@ namespace AwoDevProxy.Api.Proxy
 						var close = (ProxyWebSocketClose)packet;
 						if (_webSocketProxies.TryGetValue(close.SocketId, out var proxy))
 							await proxy.CloseAsync();
-						
+
 						break;
 					}
 			}
@@ -77,17 +78,22 @@ namespace AwoDevProxy.Api.Proxy
 			await stream.DisposeAsync();
 		}
 
-		public async Task<IActionResult> HandleWebSocketProxyAsync(WebSocketProxy proxy)
+		private async Task RemoveWebSocketProxyAsync(WebSocketProxy proxy)
+		{
+			_webSocketProxies.Remove(proxy.Id);
+			var message = new ProxyWebSocketClose { SocketId = proxy.Id };
+			await SendPacketAsync(message);
+		}
+
+		public async Task HandleWebSocketProxyAsync(WebSocketProxy proxy)
 		{
 			_webSocketProxies.Add(proxy.Id, proxy);
-			while (proxy.IsOpen)
-			{
-				var read = await proxy.ReadAsync();
-				await SendPacketAsync(read);
-			}
 
-			_webSocketProxies.Remove(proxy.Id);
-			return new StatusCodeResult(StatusCodes.Status200OK);
+			WebSocketProxyReadResult read;
+			while ((read = await proxy.ReadAsync()).IsOpen)	
+				await SendPacketAsync(read.DataFrame);
+
+			await RemoveWebSocketProxyAsync(proxy);
 		}
 
 		public async Task<WebSocketResult> OpenWebSocketProxyAsync(ProxyWebSocketOpen model)
@@ -119,7 +125,7 @@ namespace AwoDevProxy.Api.Proxy
 
 		public async Task<IActionResult> SocketWaitLoop()
 		{
-			var packetBuffer = new MemoryStream();
+			RecyclableMemoryStream packetBuffer = null;
 			var buffer = new byte[_bufferSize];
 
 			try
@@ -129,13 +135,17 @@ namespace AwoDevProxy.Api.Proxy
 					var received = await Socket.ReceiveAsync(buffer, _cancelSource.Token);
 					if (received.MessageType == WebSocketMessageType.Close)
 						break;
-				
+
+					if (packetBuffer == null)
+						packetBuffer = _streamManager.GetStream();
+
 					await packetBuffer.WriteAsync(buffer, 0, received.Count);
 					if (received.EndOfMessage)
 					{
 						packetBuffer.Position = 0;
 						HandlePacketReceived(packetBuffer);
-						packetBuffer.SetLength(0);
+						await packetBuffer.DisposeAsync();
+						packetBuffer = null;
 					}
 				}
 			}
@@ -149,7 +159,7 @@ namespace AwoDevProxy.Api.Proxy
 				if (Socket.State == WebSocketState.Open)
 					await Socket.CloseAsync(WebSocketCloseStatus.InternalServerError, "Unexpected exception occured", CancellationToken.None);
 
-				packetBuffer.Dispose();
+				packetBuffer?.Dispose();
 			}
 
 			Dispose();

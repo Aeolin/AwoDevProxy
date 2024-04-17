@@ -22,6 +22,9 @@ namespace AwoDevProxy.Api.Middleware
 		public async Task InvokeAsync(HttpContext context)
 		{
 			var host = context.Request.Host.Host;
+			if (host == "localhost" && context.WebSockets.IsWebSocketRequest)
+				host = "test.localhost";
+
 			var split = host.IndexOf('.');
 			if (split > 0)
 			{

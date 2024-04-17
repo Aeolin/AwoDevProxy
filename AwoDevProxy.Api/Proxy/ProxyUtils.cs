@@ -28,6 +28,7 @@ namespace AwoDevProxy.Api.Proxy
 		{
 			response.StatusCode = error.StatusCode;
 			await response.WriteAsync(error.Message);
+			await response.CompleteAsync();
 		}
 
 		internal static async Task WriteResponseToPipelineAsync(ProxyHttpResponse proxyResponse, HttpResponse response)

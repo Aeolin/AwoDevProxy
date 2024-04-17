@@ -2,7 +2,7 @@
   "profiles": {
     "AwoDevProxy.Client": {
       "commandName": "Project",
-      "commandLineArgs": "--local http://localhost:5100 --proxy wss://localhost:7081 --name test --key 3@rkRdrki^v@aB^@pDF6LgGgC%^6X9UU --try-reopen"
+      "commandLineArgs": "--local https://localhost:7249 --proxy wss://localhost:7081 --name test --key 3@rkRdrki^v@aB^@pDF6LgGgC%^6X9UU --try-reopen"
     }
   }
 }
