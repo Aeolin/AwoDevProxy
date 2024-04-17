@@ -7,11 +7,13 @@ namespace AwoDevProxy.Api.Controllers
 	{
 		private IProxyManager _manager;
 		private ProxyConfig _config;
+		private ILogger _logger;
 
-		public ProxyController(IProxyManager manager, ProxyConfig config)
+		public ProxyController(IProxyManager manager, ProxyConfig config, ILoggerFactory factor)
 		{
 			_manager=manager;
 			_config=config;
+			_logger = factor.CreateLogger<ProxyController>();
 		}
 
 		[Route("/ws/{name}")]
@@ -19,14 +21,23 @@ namespace AwoDevProxy.Api.Controllers
 		public async Task<IActionResult> SetupProxyAsync(string name, [FromQuery]bool force = false, [FromQuery]string authKey = null, [FromQuery]TimeSpan? requestTimeout = null)
 		{
 			if (HttpContext.WebSockets.IsWebSocketRequest == false)
+			{
+				_logger.LogInformation("Declined /ws requesnt since it wasn't a websocket request");
 				return BadRequest("Expected WebSocket Environment");
+			}
 
 			if (_config.FixedKey != null && _config.FixedKey.Equals(authKey) == false)
+			{
+				_logger.LogInformation("Declined /ws request because keys didnt match");
 				return StatusCode(StatusCodes.Status403Forbidden, "wrong key");
+			}
 
 			var exists = await _manager.IsProxyAvailableAsync(name);
 			if (force == false && exists)
+			{
+				_logger.LogInformation($"Declined /ws request because proxy with name {name} already existed");
 				return BadRequest("Proxy already exists for the give name");
+			}
 
 			var timeout = requestTimeout ?? _config.DefaultTimeout;
 			if (_config.MaxTimeout < timeout)
@@ -34,6 +45,7 @@ namespace AwoDevProxy.Api.Controllers
 
 			var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 			var proxyTask = _manager.SetupProxy(name, socket, timeout);
+			_logger.LogInformation($"Accepted /ws request for name {name}");
 			return await proxyTask;
 		}
 	}
