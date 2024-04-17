@@ -19,7 +19,7 @@ namespace AwoDevProxy.Api.Controllers
 		public async Task<IActionResult> SetupProxyAsync(string name, [FromQuery]bool force = false, [FromQuery]string authKey = null, [FromQuery]TimeSpan? requestTimeout = null)
 		{
 			if (HttpContext.WebSockets.IsWebSocketRequest == false)
-				return BadRequest();
+				return BadRequest("Expected WebSocket Environment");
 
 			if (_config.FixedKey != null && _config.FixedKey.Equals(authKey) == false)
 				return StatusCode(StatusCodes.Status403Forbidden, "wrong key");
