@@ -109,12 +109,12 @@ namespace AwoDevProxy.Api.Proxy
 					}
 					else if (result.Success && result.Response.Success == false)
 					{
-						_logger.LogInformation("Rejected websocket request[{requestId}] to patt [{subdomain}:{path}] because the cliend declined it", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
+						_logger.LogInformation("Rejected websocket request[{requestId}] to path [{subdomain}:{path}] because the cliend declined it", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
 						await ProxyUtils.WriteErrorAsync(result.Response.ResponseCode, result.Response.ErrorMessage, context.Response);
 					}
 					else
 					{
-						_logger.LogInformation("Rejected websocket request[{requestId}] to patt [{subdomain}:{path}] because of time out", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
+						_logger.LogInformation("Rejected websocket request[{requestId}] to path [{subdomain}:{path}] because of time out", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
 						await ProxyUtils.WriteErrorAsync(result.Error, context.Response);
 					}
 				}
