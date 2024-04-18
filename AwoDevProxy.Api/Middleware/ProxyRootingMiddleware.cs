@@ -42,7 +42,8 @@ namespace AwoDevProxy.Api.Middleware
 				}
 			}
 
-			await _next.Invoke(context);
+			if (context.Response.HasStarted == false)
+				await _next.Invoke(context);
 		}
 	}
 }

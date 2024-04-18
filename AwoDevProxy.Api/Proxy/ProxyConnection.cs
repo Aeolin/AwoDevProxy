@@ -34,13 +34,13 @@ namespace AwoDevProxy.Api.Proxy
 			Socket = socket;
 			_bufferSize = bufferSize;
 			_cancelSource = new CancellationTokenSource();
-			SocketTask = SocketWaitLoop();
 			_timeout = requestTimeout;
 			_openRequests = new TimedTaskHolder<Guid, ProxyHttpResponse>();
 			_openWebsockets = new TimedTaskHolder<Guid, ProxyWebSocketOpenAck>();
 			_webSocketProxies = new Dictionary<Guid, WebSocketProxy>();
 			_streamManager = streamPool;
 			_logger = factory.CreateLogger($"{nameof(ProxyConnection)}[{name}]");
+			SocketTask = SocketWaitLoop();
 		}
 
 		private readonly RecyclableMemoryStreamManager _streamManager;
