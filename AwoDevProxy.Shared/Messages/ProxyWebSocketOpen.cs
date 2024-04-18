@@ -22,5 +22,7 @@ namespace AwoDevProxy.Shared.Messages
 
 		[IgnoreMember]
 		public string Scheme => Secure ? "wss" : "ws";
+
+		public override string ToString() => $"{nameof(ProxyWebSocketOpen)}[{SocketId}]";
 	}
 }

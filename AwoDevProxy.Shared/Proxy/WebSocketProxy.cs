@@ -13,6 +13,8 @@ namespace AwoDevProxy.Shared.Proxy
 		private readonly WebSocket _socket;
 		private readonly byte[] _buffer;
 
+		public override string ToString() => $"{nameof(WebSocketProxy)}[{Id}]";
+
 		public WebSocketProxy(Guid id, WebSocket socket, CancellationTokenSource cts = null)
 		{
 			Id=id;

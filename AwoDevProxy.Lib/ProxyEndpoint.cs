@@ -41,12 +41,13 @@ namespace AwoDevProxy.Lib
 			_logger = factory?.CreateLogger<ProxyEndpoint>();
 			_streamManager=manager ?? new RecyclableMemoryStreamManager();
 			_webSocketProxies = new Dictionary<Guid, WebSocketProxy>();
-			_taskManager = new TaskManager();
+			_taskManager = new TaskManager(factory);
 			SetupTasks(_taskManager);
 		}
 
 		private void SetupTasks(TaskManager manager)
 		{
+			manager.WithWakupAfterInactivity(TimeSpan.FromSeconds(30));
 			manager.WithTaskSource<ClientWebSocket, WebSocketReceiveResult>(GetTask_Client, opts =>
 			{
 				opts.HandleResult(Handle_Client_ReadResultAsync);
@@ -57,21 +58,27 @@ namespace AwoDevProxy.Lib
 			{
 				opts.HandleResult(Handle_WebSocket_ReadResultAsync);
 			});
+
+			manager.WithTaskSource<ProxyHttpRequest, ProxyHttpResponse>(Handle_Client_HttpRequestAsync, opts =>
+			{
+				opts.HandleResult(HandlePacketResultAsync);
+			});
+
+			manager.WithTaskSource<ProxyWebSocketOpen, ProxyWebSocketOpenAck>(Handle_WebSocket_OpenAsync, opts =>
+			{
+				opts.HandleResult(HandlePacketResultAsync);
+			});
 		}
 
 
 		private async Task HandlePacketAsync(Stream stream)
 		{
 			var packet = PacketSerializer.Deserialize<MessageType>(stream, out var type);
-			object result = null;
 			switch (type)
 			{
 				case MessageType.HttpRequest:
-					result = await Handle_Client_HttpRequestAsync((ProxyHttpRequest)packet);
-					break;
-
 				case MessageType.WebSocketOpen:
-					result = await Handle_WebSocket_OpenAsync((ProxyWebSocketOpen)packet);
+					_taskManager.SubmitSource(packet.GetType(), packet);
 					break;
 
 				case MessageType.WebSocketData:
@@ -82,10 +89,16 @@ namespace AwoDevProxy.Lib
 					await Handle_WebSocket_CloseAsync((ProxyWebSocketClose)packet);
 					break;
 			}
-
-			if (result != null)
-				await SendPacketAsync(result);
 		}
+
+		private async Task<bool> HandlePacketResultAsync<TRequest, TResponse>(TRequest resquest, TResponse response)
+		{
+			if (resquest != null)
+				await SendPacketAsync(response);
+
+			return false;
+		}
+
 
 		private async Task SendPacketAsync(object packet)
 		{

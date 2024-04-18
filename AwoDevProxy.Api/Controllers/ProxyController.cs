@@ -46,7 +46,8 @@ namespace AwoDevProxy.Api.Controllers
 			var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 			var proxyTask = _manager.SetupProxy(name, socket, timeout);
 			_logger.LogInformation($"Accepted /ws request for name {name}");
-			return await proxyTask;
+			await proxyTask;
+			return default;
 		}
 	}
 }

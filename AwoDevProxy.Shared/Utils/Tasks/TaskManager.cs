@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,9 +11,13 @@ namespace AwoDevProxy.Shared.Utils.Tasks
 	{
 		private readonly Dictionary<Task, object> _currentObjects = new Dictionary<Task, object>();
 		private readonly Dictionary<Type, ITaskHandler> _taskHandlers = new Dictionary<Type, ITaskHandler>();
+		private readonly ILogger _logger;
+
 		private readonly List<Task> _taskList = new List<Task>();
 		private TaskCompletionSource _interrupt;
 		private bool _stopRequested;
+		private TimeSpan? _wakeupAfter;
+		private bool _exitWithDelayLeft = true;
 
 		public void Stop()
 		{
@@ -20,6 +25,11 @@ namespace AwoDevProxy.Shared.Utils.Tasks
 			_interrupt.SetResult();
 			_interrupt = new TaskCompletionSource();
 			_currentObjects.Clear();
+		}
+
+		public TaskManager(ILoggerFactory factory = null)
+		{
+			_logger = factory?.CreateLogger<TaskManager>();
 		}
 
 		public TaskManager WithTaskSource<TSource, TResult>(Func<TSource, Task<TResult>> taskGetter, Action<ITaskBuilder<TSource, TResult>> configure = null)
@@ -31,9 +41,15 @@ namespace AwoDevProxy.Shared.Utils.Tasks
 			return this;
 		}
 
-		public void SubmitSource<TSource>(TSource obj)
+		public TaskManager WithWakupAfterInactivity(TimeSpan wakupInterval, bool exitWithDelayLeft = true)
 		{
-			var type = typeof(TSource);
+			_wakeupAfter = wakupInterval;
+			_exitWithDelayLeft = exitWithDelayLeft;
+			return this;
+		}
+
+		public void SubmitSource(Type type, object obj)
+		{
 			if (_taskHandlers.TryGetValue(type, out var handler) == false)
 			{
 				var handledType = _taskHandlers.Select(x => x.Key).FirstOrDefault(x => type.IsAssignableTo(x));
@@ -46,13 +62,17 @@ namespace AwoDevProxy.Shared.Utils.Tasks
 
 			_currentObjects.Add(handler.GetTask(obj), obj);
 			_interrupt.TrySetResult();
+			_logger?.LogInformation("Added task for source {source}", obj);
 		}
 
-		public async Task<bool> AwaitNextTask()
+		public void SubmitSource<TSource>(TSource obj)
 		{
-			if (_currentObjects.Count == 0)
-				return false;
+			var type = typeof(TSource);
+			SubmitSource(type, obj);
+		}
 
+		private bool PrepareTaskList(out Task delay)
+		{
 			if (_interrupt.Task.IsCompleted)
 				_interrupt = new TaskCompletionSource();
 
@@ -60,16 +80,32 @@ namespace AwoDevProxy.Shared.Utils.Tasks
 			_taskList.Clear();
 			_taskList.AddRange(_currentObjects.Keys);
 			_taskList.Add(_interrupt.Task);
-			var delay = Task.Delay(10000);
-			_taskList.Add(delay);
 
-			if (_taskList.Count < 3)
+			if (_wakeupAfter.HasValue)
+			{
+				delay = Task.Delay(_wakeupAfter.Value);
+				_taskList.Add(delay);
+			}
+			else
+			{
+				delay = null;
+			}
+
+			return _currentObjects.Count > 0 || (_wakeupAfter.HasValue && _exitWithDelayLeft == false);
+		}
+
+		public async Task<bool> AwaitNextTask()
+		{
+			if (_currentObjects.Count == 0)
+				return false;
+
+			if (PrepareTaskList(out var delay) == false)
 				return false;
 
 			var task = await Task.WhenAny(_taskList);
-			if(task == delay)
+			if (_wakeupAfter.HasValue && task == delay)
 			{
-				Console.WriteLine("Hit delay task");
+				_logger?.LogInformation("Hit delay task, next hit in {wakeUpPeriod}", _wakeupAfter.Value);
 				return true;
 			}
 			else if (task == _interrupt.Task)
@@ -83,11 +119,11 @@ namespace AwoDevProxy.Shared.Utils.Tasks
 				if (await handler.HandleTaskResult(task, source))
 				{
 					_currentObjects.Add(handler.GetTask(source), source);
-					Console.WriteLine("Readded task");
+					_logger?.LogInformation("Readded task for source {source}", source);
 				}
 				else
 				{
-					Console.WriteLine($"Dismissed task for {source}");
+					_logger?.LogInformation("Dismissed source {source}", source);
 				}
 			}
 

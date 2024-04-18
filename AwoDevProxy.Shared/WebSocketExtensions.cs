@@ -49,7 +49,6 @@ namespace AwoDevProxy.Shared
 				foreach(var memory in seq)
 				{
 					countWritten += memory.Length;
-					Console.WriteLine($"CountWritten: {countWritten}, end: {countWritten == seq.Length}");
 					await webSocket.SendAsync(memory, WebSocketMessageType.Binary, countWritten == seq.Length, token);
 				}	
 			}

@@ -29,5 +29,7 @@ namespace AwoDevProxy.Shared.Messages
 		[Key(4)]
 		public byte[] Body { get; set; }
 
+		public override string ToString() => $"{nameof(ProxyHttpRequest)}[[{TraceNumber}]{RequestId}]";
+
 	}
 }
