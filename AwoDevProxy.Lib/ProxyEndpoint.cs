@@ -150,7 +150,11 @@ namespace AwoDevProxy.Lib
 		public async Task RunAsync(CancellationTokenSource cts)
 		{
 			_cancelToken = cts ?? new CancellationTokenSource();
-			var uri = new Uri($"{Config.ProxyServer}/ws/{Config.Name}?authKey={HttpUtility.UrlEncode(Config.AuthKey)}");
+			var url = $"{Config.ProxyServer}/ws/{Config.Name}?authKey={HttpUtility.UrlEncode(Config.AuthKey)}";
+			if (Config.RequestTimeout.HasValue)
+				url += $"&requestTimeout={Config.RequestTimeout.Value}";
+
+			var uri = new Uri(url);
 			int retryCount = 0;
 			do
 			{

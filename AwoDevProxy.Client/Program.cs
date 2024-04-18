@@ -16,20 +16,22 @@ internal class Program
 		var authOption = new Option<string>("--key", "Auth key for proxy server");
 		var bufferSizeOption = new Option<int>("--buffer-size", () => 2048, "Buffer size of the websockt");
 		var tryReopen = new Option<bool>("--try-reopen", () => false, "Try to reopen proxy if connection failed or lost");
+		var timeout = new Option<TimeSpan?>("--server-timeout", () => null, "Default request timeout for proxy server");
 		rootCommand.AddOption(localOption);
 		rootCommand.AddOption(proxyOption);
 		rootCommand.AddOption(nameOption);
 		rootCommand.AddOption(authOption);
 		rootCommand.AddOption(bufferSizeOption);
 		rootCommand.AddOption(tryReopen);
-		rootCommand.SetHandler(Run, localOption, proxyOption, nameOption, authOption, tryReopen, bufferSizeOption);
+		rootCommand.AddOption(timeout);
+		rootCommand.SetHandler(Run, localOption, proxyOption, nameOption, authOption, tryReopen, bufferSizeOption, timeout);
 
 		return await rootCommand.InvokeAsync(args);
 	}
 
-	static async Task Run(string local, string proxy, string name, string authKey, bool tryReopen, int bufferSize = 2048)
+	static async Task Run(string local, string proxy, string name, string authKey, bool tryReopen, int bufferSize = 2048, TimeSpan? timeout = null)
 	{
-		var config = new ProxyEndpointConfig(local, proxy, name, authKey, tryReopen, bufferSize);
+		var config = new ProxyEndpointConfig(local, proxy, name, authKey, tryReopen, bufferSize, timeout);
 		var factory = LoggerFactory.Create(opts => opts.AddConsole());
 		var proxyClient = new ProxyEndpoint(config, factory);
 		var cts = new CancellationTokenSource();
