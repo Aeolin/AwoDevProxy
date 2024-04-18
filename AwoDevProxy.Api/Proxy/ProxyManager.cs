@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.ObjectPool;
 using Microsoft.IO;
+using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
 
@@ -99,16 +100,21 @@ namespace AwoDevProxy.Api.Proxy
 					_logger.LogInformation("Got websocket request[{requestId}] for path [{subdomain}:{path}]", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
 					var request = new ProxyWebSocketOpen { SocketId = data.RequestId, PathAndQuery = context.Request.GetEncodedPathAndQuery(), Secure = context.Request.IsHttps };
 					var result = await connection.OpenWebSocketProxyAsync(request);
-					if (result.Success)
+					if (result.Success && result.Response.Success)
 					{
 						var socket = await context.WebSockets.AcceptWebSocketAsync();
 						var proxy = new WebSocketProxy(request.SocketId, socket);
 						_logger.LogInformation("Accepted websocket request[{requestId}] for path [{subdomain}:{path}]", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
 						await connection.HandleWebSocketProxyAsync(proxy);
 					}
+					else if (result.Success && result.Response.Success == false)
+					{
+						_logger.LogInformation("Rejected websocket request[{requestId}] to patt [{subdomain}:{path}] because the cliend declined it", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
+						await ProxyUtils.WriteErrorAsync(result.Response.ResponseCode, result.Response.ErrorMessage, context.Response);
+					}
 					else
 					{
-						_logger.LogInformation("Rejected websocket request[{requestId}] to paht [{subdomain}:{path}]", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
+						_logger.LogInformation("Rejected websocket request[{requestId}] to patt [{subdomain}:{path}] because of time out", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
 						await ProxyUtils.WriteErrorAsync(result.Error, context.Response);
 					}
 				}

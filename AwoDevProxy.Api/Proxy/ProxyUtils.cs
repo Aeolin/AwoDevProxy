@@ -25,11 +25,16 @@ namespace AwoDevProxy.Api.Proxy
 			return new ProxyHttpRequest { RequestId = data?.RequestId ?? Guid.NewGuid(), TraceNumber = data?.TraceNumber, PathAndQuery = pathAndQuery, Headers = headers, Body = body, Method = method };
 		}
 
-		internal static async Task WriteErrorAsync(ProxyError error, HttpResponse response)
+		internal static async Task WriteErrorAsync(int status, string message, HttpResponse response)
 		{
-			response.StatusCode = error.StatusCode;
-			await response.WriteAsync(error.Message);
+			response.StatusCode = status;
+			await response.WriteAsync(message);
 			await response.CompleteAsync();
+		}
+
+		internal static Task WriteErrorAsync(ProxyError error, HttpResponse response)
+		{
+			return WriteErrorAsync(error.StatusCode, error.Message, response);
 		}
 
 		internal static async Task WriteResponseToPipelineAsync(ProxyHttpResponse proxyResponse, HttpResponse response)
