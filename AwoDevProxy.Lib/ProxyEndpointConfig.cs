@@ -16,6 +16,9 @@ namespace AwoDevProxy.Lib
 		public string AuthKey { get; init; }
 		public bool TryReopen { get; init; }
 
+		public bool IsLocalSecure => LocalAddress.StartsWith("https");
+		public string WebSocketScheme => IsLocalSecure ? "wss" : "ws";
+
 		[JsonConstructor]
 		public ProxyEndpointConfig(string localAddress, string proxyServer, string name, string authKey, bool tryReopen, int bufferSize = 2048)
 		{

@@ -186,18 +186,19 @@ namespace AwoDevProxy.Api.Proxy
 			}
 			catch (Exception ex)
 			{
-				if (ex is not TaskCanceledException)
+				if (ex is not TaskCanceledException && ex is not WebSocketException)
 					throw;
 			}
 			finally
 			{
+				packetBuffer?.Dispose();
+
 				if (Socket.State == WebSocketState.Open)
 					await Socket.CloseAsync(WebSocketCloseStatus.InternalServerError, "Unexpected exception occured", CancellationToken.None);
 
-				packetBuffer?.Dispose();
+				Dispose();
 			}
 
-			Dispose();
 			return new StatusCodeResult(200);
 		}
 

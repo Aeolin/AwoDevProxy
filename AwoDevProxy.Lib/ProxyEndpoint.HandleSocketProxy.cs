@@ -77,7 +77,7 @@ namespace AwoDevProxy.Lib
 			var client = new ClientWebSocket();
 			var url = $"{Config.LocalAddress}{request.PathAndQuery}";
 			var index = url.IndexOf("://");
-			url = $"{request.Scheme}{url.Substring(index)}";
+			url = $"{Config.WebSocketScheme}{url.Substring(index)}";
 			var cts = new CancellationTokenSource();
 
 			try

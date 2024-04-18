@@ -62,7 +62,7 @@ namespace AwoDevProxy.Lib
 				var httpRequest = ProxyUtils.CreateRequestFromProxy(request);
 				var response = await _http.SendAsync(httpRequest);
 				var proxyResponse = await ProxyUtils.CreateResponseFromHttpAsync(response, request.RequestId);
-				_logger?.LogInformation($"Handeled request for {request.PathAndQuery}, response: {response.StatusCode}");
+				_logger?.LogInformation($"Handeled request[{request.RequestId}] for {request.PathAndQuery}, response: {response.StatusCode}");
 				return proxyResponse;
 			}
 			catch (Exception ex)
