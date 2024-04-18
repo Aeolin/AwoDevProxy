@@ -26,7 +26,7 @@ namespace AwoDevProxy.Shared
 			}
 		}
 
-		public static void Serialize<T>(object obj, IBufferWriter<byte> writer)
+		public static T Serialize<T>(object obj, IBufferWriter<byte> writer)
 		{
 			if (obj == null)
 				throw new ArgumentNullException(nameof(obj));
@@ -35,6 +35,7 @@ namespace AwoDevProxy.Shared
 			{
 				MessagePackSerializer.Serialize(writer, key);
 				MessagePackSerializer.Serialize(writer, obj);
+				return key;
 			}
 			else
 			{

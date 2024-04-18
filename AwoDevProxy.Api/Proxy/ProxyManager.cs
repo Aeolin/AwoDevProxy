@@ -16,11 +16,15 @@ namespace AwoDevProxy.Api.Proxy
 		private readonly Dictionary<string, ProxyConnection> _connections = new Dictionary<string, ProxyConnection>();
 		private readonly ProxyConfig _config;
 		private readonly RecyclableMemoryStreamManager _streamManager;
+		private readonly ILogger _logger;
+		private readonly ILoggerFactory _factory;
 
-		public ProxyManager(ProxyConfig config, RecyclableMemoryStreamManager streamManager)
+		public ProxyManager(ProxyConfig config, RecyclableMemoryStreamManager streamManager, ILoggerFactory factory)
 		{
 			_config=config;
 			_streamManager=streamManager;
+			_logger = factory.CreateLogger<ProxyManager>();
+			_factory = factory;
 		}
 
 		public bool ProxyExists(string name)
@@ -36,12 +40,14 @@ namespace AwoDevProxy.Api.Proxy
 		{
 			connection.SocketClosed -= Connection_SocketClosed;
 			_connections.Remove(connection.Name);
+			_logger.LogInformation("Proxy listener for subdomain {subdomain} removed", connection.Name);
 		}
 
 		private void AddProxy(ProxyConnection connection)
 		{
 			connection.SocketClosed += Connection_SocketClosed;
 			_connections.Add(connection.Name, connection);
+			_logger.LogInformation("Proxy listener for subdomain {subdomain} added", connection.Name);
 		}
 
 		private void Connection_SocketClosed(ProxyConnection connection)
@@ -58,8 +64,9 @@ namespace AwoDevProxy.Api.Proxy
 				_connections.Remove(proxyName);
 			}
 
-			proxyConnection = new ProxyConnection(_streamManager, proxyName, socket, requestTimeout);
+			proxyConnection = new ProxyConnection(_streamManager, proxyName, socket, requestTimeout, _factory, 4096*4);
 			AddProxy(proxyConnection);
+			_logger.LogInformation("New Proxy listener for subdomain {subdomain} create with timeout {timeout}", proxyName, requestTimeout);
 			return proxyConnection.SocketTask;
 		}
 
@@ -86,32 +93,39 @@ namespace AwoDevProxy.Api.Proxy
 		{
 			if (_connections.TryGetValue(id, out var connection))
 			{
+				var data = context.GetProxyData();
 				if (context.WebSockets.IsWebSocketRequest)
 				{
-					var request = new ProxyWebSocketOpen { PathAndQuery = context.Request.GetEncodedPathAndQuery(), Secure = context.Request.IsHttps };
+					_logger.LogInformation("Got websocket request[{requestId}] for path [{subdomain}:{path}]", data.RequestId, id, context.Request.GetEncodedPathAndQuery());
+					var request = new ProxyWebSocketOpen { SocketId = data.RequestId, PathAndQuery = context.Request.GetEncodedPathAndQuery(), Secure = context.Request.IsHttps };
 					var result = await connection.OpenWebSocketProxyAsync(request);
 					if (result.Success)
 					{
 						var socket = await context.WebSockets.AcceptWebSocketAsync();
 						var proxy = new WebSocketProxy(request.SocketId, socket);
+						_logger.LogInformation("Accepted websocket request[{requestId}] for path [{subdomain}:{path}]", data.RequestId, id, context.Request.GetEncodedPathAndQuery());
 						await connection.HandleWebSocketProxyAsync(proxy);
 					}
 					else
 					{
+						_logger.LogInformation("Rejected websocket request[{requestId}] to paht [{subdomain}:{path}]", data.RequestId, id, context.Request.GetEncodedPathAndQuery());
 						await ProxyUtils.WriteErrorAsync(result.Error, context.Response);
 					}
 				}
 				else
 				{
-					var request = await ProxyUtils.ConstructProxyRequestAsync(context.Request);
+					_logger.LogInformation("Got http request[{requestId}] for path [{subdomain}:{path}]", data.RequestId, id, context.Request.GetEncodedPathAndQuery());
+					var request = await ProxyUtils.ConstructProxyRequestAsync(context.Request, data.RequestId);
 					var result = await connection.HandleHttpRequestAsync(request);
 					if (result.Success)
 					{
 						await ProxyUtils.WriteResponseToPipelineAsync(result.Response, context.Response);
+						_logger.LogInformation("Answered http request[{requestId}] to path [{subdomain}:{path}], result success: {status}", data.RequestId, id, context.Request.GetEncodedPathAndQuery(), result.Response.StatusCode);
 					}
 					else
 					{
 						await ProxyUtils.WriteErrorAsync(result.Error, context.Response);
+						_logger.LogInformation("Answered http request[{requestId}] to path [{subdomain}:{path}], result error: {status} {message}", data.RequestId, id, context.Request.GetEncodedPathAndQuery(), result.Error.StatusCode, result.Error.Message);
 					}
 				}
 

@@ -50,6 +50,9 @@ namespace AwoDevProxy.Shared.Utils.Tasks
 
 		public async Task<bool> AwaitNextTask()
 		{
+			if (_currentObjects.Count == 0)
+				return false;
+
 			if (_interrupt.Task.IsCompleted)
 				_interrupt = new TaskCompletionSource();
 
@@ -57,6 +60,8 @@ namespace AwoDevProxy.Shared.Utils.Tasks
 			_taskList.Clear();
 			_taskList.AddRange(_currentObjects.Keys);
 			_taskList.Add(_interrupt.Task);
+			if (_taskList.Count < 2)
+				return false;
 
 			var task = await Task.WhenAny(_taskList);
 			if (task == _interrupt.Task)
@@ -68,7 +73,10 @@ namespace AwoDevProxy.Shared.Utils.Tasks
 				_currentObjects.Remove(task);
 				var handler = _taskHandlers[source.GetType()];
 				if (await handler.HandleTaskResult(task, source))
+				{
 					_currentObjects.Add(handler.GetTask(source), source);
+					Console.WriteLine("Readded task");
+				}
 			}
 
 			return _currentObjects.Count > 0;

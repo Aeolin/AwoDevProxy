@@ -19,8 +19,17 @@ builder.Services.AddSingleton<IProxyManager, ProxyManager>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseCors(opts =>
+{
+	opts.AllowAnyMethod();
+	opts.AllowAnyHeader();
+	opts.AllowCredentials();
+	opts.SetIsOriginAllowed(x => true);
+});
+
 app.UseWebSockets();
 app.UseMiddleware<ProxyRootingMiddleware>();
+
 
 if (app.Environment.IsDevelopment())
 {
