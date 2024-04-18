@@ -13,7 +13,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AwoDevProxy.Shared", "AwoDe
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{B89C9427-C454-4E21-BB69-65476059B2EF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AwoDevProxy.Playground", "AwoDevProxy.Playground\AwoDevProxy.Playground.csproj", "{19B8D70E-EDD1-4B90-83FB-B9703CE33620}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AwoDevProxy.Playground", "AwoDevProxy.Playground\AwoDevProxy.Playground.csproj", "{19B8D70E-EDD1-4B90-83FB-B9703CE33620}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{DADDD222-5AEB-4C28-82AC-BBED7B55E108}"
+	ProjectSection(SolutionItems) = preProject
+		install-client-linux.sh = install-client-linux.sh
+		readme.md = readme.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
