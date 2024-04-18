@@ -7,7 +7,7 @@ using System.Text;
 
 namespace AwoDevProxy.Api.Proxy
 {
-    public static class ProxyUtils
+	public static class ProxyUtils
 	{
 		internal static async Task<ProxyHttpRequest> ConstructProxyRequestAsync(HttpRequest request, ProxyRequestData data = null)
 		{
@@ -23,6 +23,13 @@ namespace AwoDevProxy.Api.Proxy
 			}
 
 			return new ProxyHttpRequest { RequestId = data?.RequestId ?? Guid.NewGuid(), TraceNumber = data?.TraceNumber, PathAndQuery = pathAndQuery, Headers = headers, Body = body, Method = method };
+		}
+
+		internal static ProxyWebSocketOpen ConstructWebSocketOpenRequest(HttpRequest request, Guid requestId)
+		{
+			var headers = ProxyConstants.FilterHeaders(request.Headers.ToDictionary(x => x.Key, x => x.Value.ToArray())).ToDictionary();
+			var open = new ProxyWebSocketOpen { SocketId = requestId, PathAndQuery = request.GetEncodedPathAndQuery(), Headers =  headers };
+			return open;
 		}
 
 		internal static async Task WriteErrorAsync(int status, string message, HttpResponse response)

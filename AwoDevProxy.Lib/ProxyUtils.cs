@@ -22,7 +22,7 @@ namespace AwoDevProxy.Lib
 			if (request.Body != null && request.Body.Length > 0)
 				httpRequest.Content = new ByteArrayContent(request.Body);
 
-			foreach (var header in request.Headers.Where(x => ProxyConstants.HEADER_BLACKLIST.Contains(x.Key.ToLower()) == false))
+			foreach (var header in ProxyConstants.FilterHeaders(request.Headers))
 				httpRequest.Headers.Add(header.Key, header.Value);
 
 			return httpRequest;
@@ -35,8 +35,7 @@ namespace AwoDevProxy.Lib
 
 		internal static async Task<ProxyHttpResponse> CreateResponseFromHttpAsync(HttpResponseMessage response, Guid requestId)
 		{
-			var headers = response.Headers
-				.Where(x => ProxyConstants.HEADER_BLACKLIST.Contains(x.Key.ToLower()) == false)
+			var headers = ProxyConstants.FilterHeaders(response.Headers)
 				.ToDictionary(x => x.Key, x => x.Value.ToArray());
 
 			byte[] body = null;

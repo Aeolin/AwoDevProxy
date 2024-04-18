@@ -14,20 +14,20 @@ namespace AwoDevProxy.Shared.Messages
 		[Key(0)]
 		public Guid RequestId { get; set; } = Guid.NewGuid();
 
-		[Key(5)]
-		public int? TraceNumber { get; set; }
-
 		[Key(1)]
-		public Dictionary<string, string[]> Headers { get; set; }
+		public string PathAndQuery { get; set; }
 
 		[Key(2)]
-		public string PathAndQuery { get; set; }
+		public Dictionary<string, string[]> Headers { get; set; }
 
 		[Key(3)]
 		public string Method { get; set; }
 
 		[Key(4)]
 		public byte[] Body { get; set; }
+
+		[Key(5)]
+		public int? TraceNumber { get; set; }
 
 		public override string ToString() => $"{nameof(ProxyHttpRequest)}[[{TraceNumber}]{RequestId}]";
 

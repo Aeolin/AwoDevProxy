@@ -18,10 +18,7 @@ namespace AwoDevProxy.Shared.Messages
 		public string PathAndQuery { get; set; }
 
 		[Key(2)]
-		public bool Secure { get; set; }
-
-		[IgnoreMember]
-		public string Scheme => Secure ? "wss" : "ws";
+		public Dictionary<string, string[]> Headers { get; set; }
 
 		public override string ToString() => $"{nameof(ProxyWebSocketOpen)}[{SocketId}]";
 	}

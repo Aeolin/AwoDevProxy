@@ -1,4 +1,5 @@
-﻿using AwoDevProxy.Shared.Messages;
+﻿using AwoDevProxy.Shared;
+using AwoDevProxy.Shared.Messages;
 using AwoDevProxy.Shared.Proxy;
 using Microsoft.Extensions.Logging;
 using System;
@@ -82,6 +83,10 @@ namespace AwoDevProxy.Lib
 
 			try
 			{
+				if (request.Headers != null)
+					foreach (var header in ProxyConstants.FilterHeaders(request.Headers))
+						client.Options.SetRequestHeader(header.Key, header.Value.First());
+
 				await client.ConnectAsync(new Uri(url), cts.Token);
 				var proxy = new WebSocketProxy(request.SocketId, client, cts);
 				_webSocketProxies.Add(request.SocketId, proxy);
