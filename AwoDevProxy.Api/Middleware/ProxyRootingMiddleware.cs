@@ -34,13 +34,11 @@ namespace AwoDevProxy.Api.Middleware
 				{
 					var data = new ProxyRequestData();
 					context.AddProxyData(data);
-					context.TraceIdentifier = data.RequestId.ToString();
-					_logger.LogInformation("Proxy request[{requestId}] from {userIp} to {method} {url}", data.RequestId, context.GetUserHostAddress(), context.Request.Method, context.Request.GetDisplayUrl());
-					if (await _proxy.HandleProxyAsync(key, context))
-					{
-						_logger.LogInformation("Request[{requestId}] handeled successfully", data.RequestId);
-						return;
-					}
+					context.TraceIdentifier = data.LogValue;
+					_logger.LogInformation("Proxy request[{requestId}] from {userIp} to {method} {url}", data.LogValue, context.GetUserHostAddress(), context.Request.Method, context.Request.GetDisplayUrl());
+					var result = await _proxy.HandleProxyAsync(key, context);
+					_logger.LogInformation("Request[{requestId}] handeled successfully: {result}", data.LogValue, result);
+					return;
 				}
 			}
 

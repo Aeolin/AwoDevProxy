@@ -1,4 +1,5 @@
-﻿using AwoDevProxy.Shared;
+﻿using AwoDevProxy.Api.Middleware;
+using AwoDevProxy.Shared;
 using AwoDevProxy.Shared.Messages;
 using Microsoft.AspNetCore.Http.Extensions;
 using System.Buffers;
@@ -8,7 +9,7 @@ namespace AwoDevProxy.Api.Proxy
 {
     public static class ProxyUtils
 	{
-		internal static async Task<ProxyHttpRequest> ConstructProxyRequestAsync(HttpRequest request, Guid? id = null)
+		internal static async Task<ProxyHttpRequest> ConstructProxyRequestAsync(HttpRequest request, ProxyRequestData data = null)
 		{
 			var pathAndQuery = request.GetEncodedPathAndQuery();
 			var headers = request.Headers.ToDictionary(x => x.Key, x => x.Value.ToArray());
@@ -21,7 +22,7 @@ namespace AwoDevProxy.Api.Proxy
 					body = result.Buffer.ToArray();
 			}
 
-			return new ProxyHttpRequest { RequestId = id ?? Guid.NewGuid(), PathAndQuery = pathAndQuery, Headers = headers, Body = body, Method = method };
+			return new ProxyHttpRequest { RequestId = data?.LogValue ?? Guid.NewGuid(), TraceNumber = data?.TraceNumber, PathAndQuery = pathAndQuery, Headers = headers, Body = body, Method = method };
 		}
 
 		internal static async Task WriteErrorAsync(ProxyError error, HttpResponse response)

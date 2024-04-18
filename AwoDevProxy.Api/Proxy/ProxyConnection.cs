@@ -212,6 +212,8 @@ namespace AwoDevProxy.Api.Proxy
 
 		public void Dispose()
 		{
+			_openRequests.Dispose();
+			_openWebsockets.Dispose();
 			Socket.Dispose();
 			SocketClosed?.Invoke(this);
 		}

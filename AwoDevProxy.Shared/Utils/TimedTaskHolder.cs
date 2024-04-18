@@ -45,6 +45,11 @@ namespace AwoDevProxy.Shared.Utils
 			}
 		}
 
+		public void Dispose()
+		{
+			throw new NotImplementedException();
+		}
+
 		private class TimedTaskHolderPoolPolicy : IPooledObjectPolicy<TimedTaskCompletionSource<TResult>>
 		{
 			public TimedTaskCompletionSource<TResult> Create()

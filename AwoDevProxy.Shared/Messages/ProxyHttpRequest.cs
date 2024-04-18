@@ -14,6 +14,9 @@ namespace AwoDevProxy.Shared.Messages
 		[Key(0)]
 		public Guid RequestId { get; set; } = Guid.NewGuid();
 
+		[Key(5)]
+		public int? TraceNumber { get; set; }
+
 		[Key(1)]
 		public Dictionary<string, string[]> Headers { get; set; }
 

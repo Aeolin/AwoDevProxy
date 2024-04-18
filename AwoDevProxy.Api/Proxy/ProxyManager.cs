@@ -96,36 +96,36 @@ namespace AwoDevProxy.Api.Proxy
 				var data = context.GetProxyData();
 				if (context.WebSockets.IsWebSocketRequest)
 				{
-					_logger.LogInformation("Got websocket request[{requestId}] for path [{subdomain}:{path}]", data.RequestId, id, context.Request.GetEncodedPathAndQuery());
-					var request = new ProxyWebSocketOpen { SocketId = data.RequestId, PathAndQuery = context.Request.GetEncodedPathAndQuery(), Secure = context.Request.IsHttps };
+					_logger.LogInformation("Got websocket request[{requestId}] for path [{subdomain}:{path}]", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
+					var request = new ProxyWebSocketOpen { SocketId = data.LogValue, PathAndQuery = context.Request.GetEncodedPathAndQuery(), Secure = context.Request.IsHttps };
 					var result = await connection.OpenWebSocketProxyAsync(request);
 					if (result.Success)
 					{
 						var socket = await context.WebSockets.AcceptWebSocketAsync();
 						var proxy = new WebSocketProxy(request.SocketId, socket);
-						_logger.LogInformation("Accepted websocket request[{requestId}] for path [{subdomain}:{path}]", data.RequestId, id, context.Request.GetEncodedPathAndQuery());
+						_logger.LogInformation("Accepted websocket request[{requestId}] for path [{subdomain}:{path}]", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
 						await connection.HandleWebSocketProxyAsync(proxy);
 					}
 					else
 					{
-						_logger.LogInformation("Rejected websocket request[{requestId}] to paht [{subdomain}:{path}]", data.RequestId, id, context.Request.GetEncodedPathAndQuery());
+						_logger.LogInformation("Rejected websocket request[{requestId}] to paht [{subdomain}:{path}]", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
 						await ProxyUtils.WriteErrorAsync(result.Error, context.Response);
 					}
 				}
 				else
 				{
-					_logger.LogInformation("Got http request[{requestId}] for path [{subdomain}:{path}]", data.RequestId, id, context.Request.GetEncodedPathAndQuery());
-					var request = await ProxyUtils.ConstructProxyRequestAsync(context.Request, data.RequestId);
+					_logger.LogInformation("Got http request[{requestId}] for path [{subdomain}:{path}]", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
+					var request = await ProxyUtils.ConstructProxyRequestAsync(context.Request, data.LogValue);
 					var result = await connection.HandleHttpRequestAsync(request);
 					if (result.Success)
 					{
 						await ProxyUtils.WriteResponseToPipelineAsync(result.Response, context.Response);
-						_logger.LogInformation("Answered http request[{requestId}] to path [{subdomain}:{path}], result success: {status}", data.RequestId, id, context.Request.GetEncodedPathAndQuery(), result.Response.StatusCode);
+						_logger.LogInformation("Answered http request[{requestId}] to path [{subdomain}:{path}], result success: {status}", data.LogValue, id, context.Request.GetEncodedPathAndQuery(), result.Response.StatusCode);
 					}
 					else
 					{
 						await ProxyUtils.WriteErrorAsync(result.Error, context.Response);
-						_logger.LogInformation("Answered http request[{requestId}] to path [{subdomain}:{path}], result error: {status} {message}", data.RequestId, id, context.Request.GetEncodedPathAndQuery(), result.Error.StatusCode, result.Error.Message);
+						_logger.LogInformation("Answered http request[{requestId}] to path [{subdomain}:{path}], result error: {status} {message}", data.LogValue, id, context.Request.GetEncodedPathAndQuery(), result.Error.StatusCode, result.Error.Message);
 					}
 				}
 
