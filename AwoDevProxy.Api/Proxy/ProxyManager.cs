@@ -97,7 +97,7 @@ namespace AwoDevProxy.Api.Proxy
 				if (context.WebSockets.IsWebSocketRequest)
 				{
 					_logger.LogInformation("Got websocket request[{requestId}] for path [{subdomain}:{path}]", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
-					var request = new ProxyWebSocketOpen { SocketId = data.LogValue, PathAndQuery = context.Request.GetEncodedPathAndQuery(), Secure = context.Request.IsHttps };
+					var request = new ProxyWebSocketOpen { SocketId = data.RequestId, PathAndQuery = context.Request.GetEncodedPathAndQuery(), Secure = context.Request.IsHttps };
 					var result = await connection.OpenWebSocketProxyAsync(request);
 					if (result.Success)
 					{
@@ -115,7 +115,7 @@ namespace AwoDevProxy.Api.Proxy
 				else
 				{
 					_logger.LogInformation("Got http request[{requestId}] for path [{subdomain}:{path}]", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
-					var request = await ProxyUtils.ConstructProxyRequestAsync(context.Request, data.LogValue);
+					var request = await ProxyUtils.ConstructProxyRequestAsync(context.Request, data);
 					var result = await connection.HandleHttpRequestAsync(request);
 					if (result.Success)
 					{

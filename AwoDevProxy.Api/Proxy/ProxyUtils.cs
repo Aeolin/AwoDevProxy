@@ -22,7 +22,7 @@ namespace AwoDevProxy.Api.Proxy
 					body = result.Buffer.ToArray();
 			}
 
-			return new ProxyHttpRequest { RequestId = data?.LogValue ?? Guid.NewGuid(), TraceNumber = data?.TraceNumber, PathAndQuery = pathAndQuery, Headers = headers, Body = body, Method = method };
+			return new ProxyHttpRequest { RequestId = data?.RequestId ?? Guid.NewGuid(), TraceNumber = data?.TraceNumber, PathAndQuery = pathAndQuery, Headers = headers, Body = body, Method = method };
 		}
 
 		internal static async Task WriteErrorAsync(ProxyError error, HttpResponse response)
