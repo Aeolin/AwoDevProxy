@@ -60,11 +60,19 @@ namespace AwoDevProxy.Shared.Utils.Tasks
 			_taskList.Clear();
 			_taskList.AddRange(_currentObjects.Keys);
 			_taskList.Add(_interrupt.Task);
-			if (_taskList.Count < 2)
+			var delay = Task.Delay(10000);
+			_taskList.Add(delay);
+
+			if (_taskList.Count < 3)
 				return false;
 
 			var task = await Task.WhenAny(_taskList);
-			if (task == _interrupt.Task)
+			if(task == delay)
+			{
+				Console.WriteLine("Hit delay task");
+				return true;
+			}
+			else if (task == _interrupt.Task)
 			{
 				return _stopRequested == false;
 			}
@@ -76,6 +84,10 @@ namespace AwoDevProxy.Shared.Utils.Tasks
 				{
 					_currentObjects.Add(handler.GetTask(source), source);
 					Console.WriteLine("Readded task");
+				}
+				else
+				{
+					Console.WriteLine($"Dismissed task for {source}");
 				}
 			}
 

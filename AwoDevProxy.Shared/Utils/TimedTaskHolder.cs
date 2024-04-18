@@ -47,7 +47,10 @@ namespace AwoDevProxy.Shared.Utils
 
 		public void Dispose()
 		{
-			throw new NotImplementedException();
+			foreach(var task in _tasks.Values)	
+				task.TrySetTimedOut();
+
+			_tasks.Clear();
 		}
 
 		private class TimedTaskHolderPoolPolicy : IPooledObjectPolicy<TimedTaskCompletionSource<TResult>>

@@ -3,10 +3,16 @@
 	public class TimedTaskCompletionSource<T>
 	{
 		private TaskCompletionSource<T> _source = new TaskCompletionSource<T>();
+		private bool _timedOutSet = false;
 
 		public void SetResult(T result) => _source.SetResult(result);
 		public void SetCanceled() => _source.SetCanceled();
 		public void SetException(Exception ex) => _source.SetException(ex);
+		public void TrySetTimedOut() 
+		{
+			_timedOutSet = true; 
+			_source.TrySetResult(default);
+		}
 
 		public bool TrySetResult(T result) => _source.TrySetResult(result);
 		public bool TrySetCancelled() => _source.TrySetCanceled();
@@ -27,7 +33,7 @@
 				var task = _source.Task;
 				var delay = Task.Delay(timeout.Value);
 				var first = await Task.WhenAny(task, delay);
-				if (first == delay)
+				if (first == delay || _timedOutSet)
 				{
 					return TimeOutResult.TimeOut<T>();
 				}
