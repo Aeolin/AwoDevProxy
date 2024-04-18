@@ -1,6 +1,8 @@
 # AwoDevProxy
-DevProxies allows you to connect your localhost projects temporarily to the internet
-![DevProxy Logo](./.media/dev_proxy_logo | width=150)
+<img src="./.media/dev_proxy_logo.svg" width=30%/>
+
+DevProxy allows you to connect your localhost projects temporarily to the internet
+
 
 ## How does it work?
 ![DevProxy Diagram](./.media/devproxy_scheme.png)
