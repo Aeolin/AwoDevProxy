@@ -23,7 +23,7 @@ namespace AwoDevProxy.Lib
 				httpRequest.Content = new ByteArrayContent(request.Body);
 
 			foreach (var header in ProxyConstants.FilterHeaders(request.Headers))
-				httpRequest.Headers.Add(header.Key, header.Value);
+				httpRequest.Headers.TryAddWithoutValidation(header.Key, header.Value);
 
 			return httpRequest;
 		}
