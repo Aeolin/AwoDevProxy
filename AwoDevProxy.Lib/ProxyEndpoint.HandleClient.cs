@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace AwoDevProxy.Lib
@@ -59,7 +60,7 @@ namespace AwoDevProxy.Lib
 		{
 			try
 			{
-				var httpRequest = ProxyUtils.CreateRequestFromProxy(request);
+				var httpRequest = ProxyUtils.CreateRequestFromProxy(request);	
 				var response = await _http.SendAsync(httpRequest);
 				var proxyResponse = await ProxyUtils.CreateResponseFromHttpAsync(response, request.RequestId);
 				_logger?.LogInformation($"Handeled request[[{request.TraceNumber}]{request.RequestId}] for {request.PathAndQuery}, response: {response.StatusCode}");

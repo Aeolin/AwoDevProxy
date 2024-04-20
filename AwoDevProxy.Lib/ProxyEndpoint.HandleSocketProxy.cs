@@ -83,9 +83,10 @@ namespace AwoDevProxy.Lib
 
 			try
 			{
-				if (request.Headers != null)
-					foreach (var header in ProxyConstants.FilterHeaders(request.Headers))
-						client.Options.SetRequestHeader(header.Key, header.Value.First());
+				//if (request.Headers != null)
+				//	foreach (var header in ProxyConstants.FilterHeaders(request.Headers))
+				//		if( header.Key != "Sec-WebSocket-Key")
+				//			client.Options.SetRequestHeader(header.Key, header.Value.First());
 
 				await client.ConnectAsync(new Uri(url), cts.Token);
 				var proxy = new WebSocketProxy(request.SocketId, client, cts);

@@ -2,9 +2,8 @@
 using AwoDevProxy.Shared;
 using AwoDevProxy.Shared.Messages;
 
-var mem = new MemoryStream();
-var obj = new ProxyWebSocketOpen { PathAndQuery = "/test/ws" };
-PacketSerializer.Serialize<MessageType>(obj, mem);
-mem.Position = 0;
-var packet = PacketSerializer.Deserialize<MessageType>(mem, out var key);
-Console.WriteLine(key);
+HttpClient _client = new HttpClient() { BaseAddress = new Uri("http://127.0.0.1:8888") };
+
+
+var result = await _client.GetAsync("favicon.ico");
+var content = await result.Content.ReadAsByteArrayAsync();
