@@ -1,12 +1,14 @@
 # AwoDevProxy
-DevProxies allows you to connect your localhost projects temporarily to the internet
-![DevProxy Logo](./.media/dev_proxy_logo | width=150)
+<img src="./.media/dev_proxy_logo.svg" width=30%/>
+
+DevProxy allows you to connect your localhost projects temporarily to the internet
+
 
 ## How does it work?
 ![DevProxy Diagram](./.media/devproxy_scheme.png)
 
 DevProxies works by giving you a unique subdomain on the public api server. All requests to this subdomain will then be forwarded to the locally running DevProxy Client which then will call your local service, returning the results to the API.
-The Client will open an outgoing WebSocket to the Api so now portforwarding on the client side is necessary
+The Client will open an outgoing WebSocket to the Api so no portforwarding on the client side is necessary
 
 ## Security
 Since this project was just build as a weekend project security wasn't my primary concern. 
