@@ -11,10 +11,12 @@ namespace AwoDevProxy.Shared
 {
 	public static class ProxyConstants
 	{
-		public static readonly FrozenSet<string> HEADER_BLACKLIST = FrozenSet.ToFrozenSet(["transfer-encoding", "cache-control", "host"]);
+		public static readonly FrozenSet<string> HEADER_BLACKLIST = FrozenSet.ToFrozenSet(["transfer-encoding", "cache-control", "host", "connection"]);
+		public static readonly FrozenSet<string> WEBSOCKET_HEADER_WHITELIST = FrozenSet.ToFrozenSet(["cookie", "authentication"]);
+
 
 		public static IEnumerable<KeyValuePair<string, IEnumerable<string>>> FilterHeaders(IEnumerable<KeyValuePair<string, IEnumerable<string>>> headers) => headers.Where(x => HEADER_BLACKLIST.Contains(x.Key.ToLower()) == false);
 		public static IEnumerable<KeyValuePair<string, string[]>> FilterHeaders(IEnumerable<KeyValuePair<string, string[]>> headers) => headers.Where(x => HEADER_BLACKLIST.Contains(x.Key.ToLower()) == false);
- 
+		public static IEnumerable<KeyValuePair<string, string[]>> FilterWebsocketHeaders(IEnumerable<KeyValuePair<string, string[]>> headers) => headers.Where(x => WEBSOCKET_HEADER_WHITELIST.Contains(x.Key.ToLower()));
 	}
 }
