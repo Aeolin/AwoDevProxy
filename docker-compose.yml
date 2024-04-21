@@ -5,4 +5,4 @@ services:
     image: ${DOCKER_REGISTRY-}awodevproxyapi
     build:
       context: .
-      dockerfile: AwoDevProxy.Api/Dockerfile
+      dockerfile: AwoDevProxy.Web.Api/Dockerfile
