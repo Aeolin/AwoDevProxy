@@ -1,4 +1,4 @@
-﻿namespace AwoDevProxy.Api.Middleware
+﻿namespace AwoDevProxy.Web.Api.Middleware
 {
 	public class ProxyRequestData
 	{

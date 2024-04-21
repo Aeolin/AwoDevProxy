@@ -1,7 +1,7 @@
-﻿using AwoDevProxy.Api.Proxy;
+﻿using AwoDevProxy.Web.Api.Proxy;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AwoDevProxy.Api.Controllers
+namespace AwoDevProxy.Web.Api.Controllers
 {
 	public class ProxyController : ControllerBase
 	{

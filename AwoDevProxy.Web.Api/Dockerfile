@@ -8,18 +8,18 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["AwoDevProxy.Api/AwoDevProxy.Api.csproj", "AwoDevProxy.Api/"]
+COPY ["AwoDevProxy.Web.Api/AwoDevProxy.Web.Api.csproj", "AwoDevProxy.Api/"]
 COPY ["AwoDevProxy.Shared/AwoDevProxy.Shared.csproj", "AwoDevProxy.Shared/"]
-RUN dotnet restore "./AwoDevProxy.Api/./AwoDevProxy.Api.csproj"
+RUN dotnet restore "./AwoDevProxy.Web.Api/./AwoDevProxy.Web.Api.csproj"
 COPY . .
 WORKDIR "/src/AwoDevProxy.Api"
-RUN dotnet build "./AwoDevProxy.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "./AwoDevProxy.Web.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./AwoDevProxy.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./AwoDevProxy.Web.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "AwoDevProxy.Api.dll"]
+ENTRYPOINT ["dotnet", "AwoDevProxy.Web.Api.dll"]

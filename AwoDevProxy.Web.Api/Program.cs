@@ -1,5 +1,5 @@
-using AwoDevProxy.Api.Middleware;
-using AwoDevProxy.Api.Proxy;
+using AwoDevProxy.Web.Api.Middleware;
+using AwoDevProxy.Web.Api.Proxy;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IO;
 

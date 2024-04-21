@@ -13,7 +13,7 @@ using System.Reflection;
 using System.Security;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
-namespace AwoDevProxy.Api.Proxy
+namespace AwoDevProxy.Web.Api.Proxy
 {
 	public class ProxyConnection : IDisposable
 	{

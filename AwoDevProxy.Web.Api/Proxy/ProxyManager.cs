@@ -10,7 +10,7 @@ using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
 
-namespace AwoDevProxy.Api.Proxy
+namespace AwoDevProxy.Web.Api.Proxy
 {
 	public class ProxyManager : IProxyManager
 	{

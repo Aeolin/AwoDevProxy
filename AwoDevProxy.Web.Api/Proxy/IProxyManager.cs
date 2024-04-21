@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Net.WebSockets;
 
-namespace AwoDevProxy.Api.Proxy
+namespace AwoDevProxy.Web.Api.Proxy
 {
 	public interface IProxyManager
 	{

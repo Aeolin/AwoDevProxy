@@ -1,9 +1,9 @@
-﻿using AwoDevProxy.Api.Proxy;
+﻿using AwoDevProxy.Web.Api.Proxy;
 using Microsoft.AspNetCore.Http.Extensions;
 using System.Collections.Frozen;
 using System.Net.NetworkInformation;
 
-namespace AwoDevProxy.Api.Middleware
+namespace AwoDevProxy.Web.Api.Middleware
 {
 	public class ProxyRootingMiddleware
 	{

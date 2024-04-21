@@ -1,6 +1,6 @@
 ﻿using AwoDevProxy.Shared.Messages;
 
-namespace AwoDevProxy.Api.Proxy
+namespace AwoDevProxy.Web.Api.Proxy
 {
 	public abstract class GenericResult<TResult, TImpl> where TImpl : GenericResult<TResult, TImpl>, new()
 	{

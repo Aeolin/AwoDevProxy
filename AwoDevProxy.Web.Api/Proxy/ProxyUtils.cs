@@ -1,11 +1,11 @@
-﻿using AwoDevProxy.Api.Middleware;
+﻿using AwoDevProxy.Web.Api.Middleware;
 using AwoDevProxy.Shared;
 using AwoDevProxy.Shared.Messages;
 using Microsoft.AspNetCore.Http.Extensions;
 using System.Buffers;
 using System.Text;
 
-namespace AwoDevProxy.Api.Proxy
+namespace AwoDevProxy.Web.Api.Proxy
 {
 	public static class ProxyUtils
 	{

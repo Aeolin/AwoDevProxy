@@ -1,7 +1,7 @@
-﻿using AwoDevProxy.Api.Middleware;
+﻿using AwoDevProxy.Web.Api.Middleware;
 using System.Runtime.CompilerServices;
 
-namespace AwoDevProxy.Api
+namespace AwoDevProxy.Web.Api
 {
 	public static class Extensions
 	{

@@ -1,4 +1,4 @@
-﻿namespace AwoDevProxy.Api.Proxy
+﻿namespace AwoDevProxy.Web.Api.Proxy
 {
 	public class ProxyConfig
 	{
