@@ -8,11 +8,11 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["AwoDevProxy.Web.Api/AwoDevProxy.Web.Api.csproj", "AwoDevProxy.Api/"]
+COPY ["AwoDevProxy.Web.Api/AwoDevProxy.Web.Api.csproj", "AwoDevProxy.Web.Api/"]
 COPY ["AwoDevProxy.Shared/AwoDevProxy.Shared.csproj", "AwoDevProxy.Shared/"]
-RUN dotnet restore "./AwoDevProxy.Web.Api/./AwoDevProxy.Web.Api.csproj"
+RUN dotnet restore "./AwoDevProxy.Web.Api/AwoDevProxy.Web.Api.csproj"
 COPY . .
-WORKDIR "/src/AwoDevProxy.Api"
+WORKDIR "/src/AwoDevProxy.Web.Api"
 RUN dotnet build "./AwoDevProxy.Web.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
