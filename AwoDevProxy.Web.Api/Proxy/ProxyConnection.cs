@@ -7,6 +7,7 @@ using MessagePack;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IO;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Reflection;
@@ -28,7 +29,7 @@ namespace AwoDevProxy.Web.Api.Proxy
 		private readonly TimeSpan _timeout;
 		private readonly TimedTaskHolder<Guid, ProxyHttpResponse> _openRequests;
 		private readonly TimedTaskHolder<Guid, ProxyWebSocketOpenAck> _openWebsockets;
-		private readonly Dictionary<Guid, WebSocketProxy> _webSocketProxies;
+		private readonly ConcurrentDictionary<Guid, WebSocketProxy> _webSocketProxies;
 		private readonly ILogger _logger;
 		private readonly string _password;
 		public string Password => _password;
@@ -42,7 +43,7 @@ namespace AwoDevProxy.Web.Api.Proxy
 			_timeout = requestTimeout;
 			_openRequests = new TimedTaskHolder<Guid, ProxyHttpResponse>();
 			_openWebsockets = new TimedTaskHolder<Guid, ProxyWebSocketOpenAck>();
-			_webSocketProxies = new Dictionary<Guid, WebSocketProxy>();
+			_webSocketProxies = new ConcurrentDictionary<Guid, WebSocketProxy>();
 			_streamManager = streamPool;
 			_logger = factory.CreateLogger($"{nameof(ProxyConnection)}[{name}]");
 			SocketTask = SocketWaitLoop();
@@ -75,7 +76,7 @@ namespace AwoDevProxy.Web.Api.Proxy
 				case MessageType.WebSocketData:
 					{
 						var data = (ProxyWebSocketData)packet;
-						if (_webSocketProxies.TryGetValue(data.SocketId, out var proxy))
+						if (_webSocketProxies.TryGetValue(data.SocketId, out var proxy) && proxy != null)
 						{
 							if (data.MessageType == WebSocketMessageType.Close)
 							{
@@ -116,7 +117,7 @@ namespace AwoDevProxy.Web.Api.Proxy
 
 		private async Task RemoveWebSocketProxyAsync(WebSocketProxy proxy)
 		{
-			_webSocketProxies.Remove(proxy.Id);
+			_webSocketProxies.Remove(proxy.Id, out _);
 			var message = new ProxyWebSocketClose { SocketId = proxy.Id };
 			await SendPacketAsync(message);
 			_logger.LogDebug("Closed WebSocketProxy[{id}]", proxy.Id);
@@ -124,8 +125,7 @@ namespace AwoDevProxy.Web.Api.Proxy
 
 		public async Task HandleWebSocketProxyAsync(WebSocketProxy proxy)
 		{
-			_webSocketProxies.Add(proxy.Id, proxy);
-
+			_webSocketProxies.TryAdd(proxy.Id, proxy);
 			WebSocketProxyReadResult read;
 			while ((read = await proxy.ReadAsync()).IsOpen)
 				await SendPacketAsync(read.DataFrame);
