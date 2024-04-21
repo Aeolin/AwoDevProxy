@@ -147,18 +147,39 @@ namespace AwoDevProxy.Lib
 			_webSocketProxies.Clear();
 		}
 
+		
+		private string BuildQurey()
+		{
+			Dictionary<string, string> queryValues = new Dictionary<string, string>
+			{
+				{ "authKey", Config.AuthKey },
+				{ "bufferSize", Config.BufferSize.ToString() },
+				{ "name", Config.Name }
+			};
+			
+			if(Config.RequestTimeout.HasValue)
+				queryValues.Add("requestTimeout", Config.RequestTimeout.Value.ToString());
+
+			if(string.IsNullOrEmpty(Config.Password) == false)
+				queryValues.Add("password", Config.Password);
+
+			if (Config.ForceOpen.HasValue)
+				queryValues.Add("force", Config.ForceOpen.Value.ToString());
+
+			return string.Join("&", queryValues.Select(x => $"{x.Key}={HttpUtility.UrlEncode(x.Value)}"));
+		}
+
+
 		public async Task RunAsync(CancellationTokenSource cts)
 		{
 			_cancelToken = cts ?? new CancellationTokenSource();
-			var url = $"{Config.ProxyServer}/ws/{Config.Name}?authKey={HttpUtility.UrlEncode(Config.AuthKey)}";
-			if (Config.RequestTimeout.HasValue)
-				url += $"&requestTimeout={Config.RequestTimeout.Value}";
+			var query = BuildQurey();
+			var url = new Uri( $"{Config.ProxyAddress}/ws?{query}");
 
-			var uri = new Uri(url);
 			int retryCount = 0;
 			do
 			{
-				var result = await TryRunAsync(uri);
+				var result = await TryRunAsync(url);
 				if (_cancelToken.IsCancellationRequested)
 				{
 					_logger?.LogInformation("Shutting down...");

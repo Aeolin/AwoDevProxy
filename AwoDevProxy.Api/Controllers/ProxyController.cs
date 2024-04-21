@@ -16,9 +16,9 @@ namespace AwoDevProxy.Api.Controllers
 			_logger = factor.CreateLogger<ProxyController>();
 		}
 
-		[Route("/ws/{name}")]
+		[Route("/ws")]
 		[ApiExplorerSettings(IgnoreApi = true)]
-		public async Task<IActionResult> SetupProxyAsync(string name, [FromQuery]bool force = false, [FromQuery]string authKey = null, [FromQuery]TimeSpan? requestTimeout = null)
+		public async Task<IActionResult> SetupProxyAsync([FromQuery]string name, [FromQuery]bool force = false, [FromQuery]string authKey = null, [FromQuery]TimeSpan? requestTimeout = null, [FromQuery]string password = null)
 		{
 			if (HttpContext.WebSockets.IsWebSocketRequest == false)
 			{
@@ -44,7 +44,7 @@ namespace AwoDevProxy.Api.Controllers
 				timeout = _config.MaxTimeout;
 
 			var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-			var proxyTask = _manager.SetupProxy(name, socket, timeout);
+			var proxyTask = _manager.SetupProxy(name, socket, timeout, password);
 			_logger.LogInformation($"Accepted /ws request for name {name}");
 			await proxyTask;
 			return default;

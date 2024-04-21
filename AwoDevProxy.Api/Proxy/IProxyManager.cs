@@ -7,6 +7,6 @@ namespace AwoDevProxy.Api.Proxy
 	{
 		public Task<bool> IsProxyAvailableAsync(string id);
 		public Task<bool> HandleProxyAsync(string id, HttpContext context);
-		public Task<IActionResult> SetupProxy(string name, WebSocket socket, TimeSpan timeout);
+		public Task<IActionResult> SetupProxy(string name, WebSocket socket, TimeSpan timeout, string password = null);
 	}
 }

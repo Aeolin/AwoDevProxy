@@ -2,6 +2,7 @@
 using AwoDevProxy.Shared.Messages;
 using AwoDevProxy.Shared.Proxy;
 using AwoDevProxy.Shared.Utils;
+using Isopoh.Cryptography.Argon2;
 using MessagePack;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IO;
@@ -9,6 +10,7 @@ using System.Buffers;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Reflection;
+using System.Security;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AwoDevProxy.Api.Proxy
@@ -19,6 +21,8 @@ namespace AwoDevProxy.Api.Proxy
 
 		public WebSocket Socket { get; init; }
 		public Task<IActionResult> SocketTask { get; init; }
+		public Guid? AuthCookie { get; init; }
+		
 		private int _bufferSize;
 		private readonly CancellationTokenSource _cancelSource;
 		private readonly TimeSpan _timeout;
@@ -26,9 +30,10 @@ namespace AwoDevProxy.Api.Proxy
 		private readonly TimedTaskHolder<Guid, ProxyWebSocketOpenAck> _openWebsockets;
 		private readonly Dictionary<Guid, WebSocketProxy> _webSocketProxies;
 		private readonly ILogger _logger;
+		private readonly string _password;
+		public string Password => _password;
 
-
-		public ProxyConnection(RecyclableMemoryStreamManager streamPool, string name, WebSocket socket, TimeSpan requestTimeout, ILoggerFactory factory, int bufferSize = 4096)
+		public ProxyConnection(RecyclableMemoryStreamManager streamPool, string name, WebSocket socket, TimeSpan requestTimeout, ILoggerFactory factory, string password = null, int bufferSize = 4096)
 		{
 			Name = name;
 			Socket = socket;
@@ -41,6 +46,8 @@ namespace AwoDevProxy.Api.Proxy
 			_streamManager = streamPool;
 			_logger = factory.CreateLogger($"{nameof(ProxyConnection)}[{name}]");
 			SocketTask = SocketWaitLoop();
+			_password = password;
+			AuthCookie = password == null ? null : Guid.NewGuid();
 		}
 
 		private readonly RecyclableMemoryStreamManager _streamManager;

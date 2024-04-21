@@ -56,7 +56,7 @@ namespace AwoDevProxy.Api.Proxy
 			RemoveProxy(connection);
 		}
 
-		public Task<IActionResult> SetupProxy(string proxyName, WebSocket socket, TimeSpan requestTimeout)
+		public Task<IActionResult> SetupProxy(string proxyName, WebSocket socket, TimeSpan requestTimeout, string password = null)
 		{
 			proxyName = proxyName.ToLower();
 			if (_connections.TryGetValue(proxyName, out ProxyConnection proxyConnection))
@@ -65,7 +65,7 @@ namespace AwoDevProxy.Api.Proxy
 				_connections.Remove(proxyName);
 			}
 
-			proxyConnection = new ProxyConnection(_streamManager, proxyName, socket, requestTimeout, _factory, 4096*4);
+			proxyConnection = new ProxyConnection(_streamManager, proxyName, socket, requestTimeout, _factory, password, 4096*4);
 			AddProxy(proxyConnection);
 			_logger.LogInformation("New Proxy listener for subdomain {subdomain} create with timeout {timeout}", proxyName, requestTimeout);
 			return proxyConnection.SocketTask;
@@ -90,49 +90,82 @@ namespace AwoDevProxy.Api.Proxy
 			return Task.FromResult(false);
 		}
 
+		private bool HandleAuthentication(ProxyConnection connection, HttpRequest request, out string setCookie)
+		{
+			setCookie = null;
+			if (connection.Password == null)
+				return true;
+
+			if (request.Query.TryGetValue("devprxy-auth", out var auth) && auth.First().Equals(connection.Password))
+			{
+				setCookie = connection.AuthCookie.Value.ToString();
+				request.Query = new QueryCollection(request.Query.Where(x => x.Key != "devprxy-auth").ToDictionary());
+				return true;
+			}
+
+			if (request.Cookies.TryGetValue("devprxy-auth", out string cookieValue) && connection.AuthCookie.Value.ToString().Equals(cookieValue))
+				return true;
+
+			return false;
+		}
+
 		public async Task<bool> HandleProxyAsync(string id, HttpContext context)
 		{
 			if (_connections.TryGetValue(id, out var connection))
 			{
-				var data = context.GetProxyData();
-				if (context.WebSockets.IsWebSocketRequest)
+				if (HandleAuthentication(connection, context.Request, out var cookie))
 				{
-					_logger.LogInformation("Got websocket request[{requestId}] for path [{subdomain}:{path}]", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
-					var request = ProxyUtils.ConstructWebSocketOpenRequest(context.Request, data.RequestId);
-					var result = await connection.OpenWebSocketProxyAsync(request);
-					if (result.Success && result.Response.Success)
+					if (cookie != null)
 					{
-						var socket = await context.WebSockets.AcceptWebSocketAsync();
-						var proxy = new WebSocketProxy(request.SocketId, socket);
-						_logger.LogInformation("Accepted websocket request[{requestId}] for path [{subdomain}:{path}]", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
-						await connection.HandleWebSocketProxyAsync(proxy);
+						context.Response.Cookies.Append("devprxy-auth", cookie);
+						await ProxyUtils.WriteRedirectAsync(context.Response, context.Request.GetEncodedUrl());
+						return true;
 					}
-					else if (result.Success && result.Response.Success == false)
+
+					var data = context.GetProxyData();
+					if (context.WebSockets.IsWebSocketRequest)
 					{
-						_logger.LogInformation("Rejected websocket request[{requestId}] to path [{subdomain}:{path}] because the cliend declined it", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
-						await ProxyUtils.WriteErrorAsync(result.Response.ResponseCode, result.Response.ErrorMessage, context.Response);
+						_logger.LogInformation("Got websocket request[{requestId}] for path [{subdomain}:{path}]", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
+						var request = ProxyUtils.ConstructWebSocketOpenRequest(context.Request, data.RequestId);
+						var result = await connection.OpenWebSocketProxyAsync(request);
+						if (result.Success && result.Response.Success)
+						{
+							var socket = await context.WebSockets.AcceptWebSocketAsync();
+							var proxy = new WebSocketProxy(request.SocketId, socket);
+							_logger.LogInformation("Accepted websocket request[{requestId}] for path [{subdomain}:{path}]", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
+							await connection.HandleWebSocketProxyAsync(proxy);
+						}
+						else if (result.Success && result.Response.Success == false)
+						{
+							_logger.LogInformation("Rejected websocket request[{requestId}] to path [{subdomain}:{path}] because the cliend declined it", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
+							await ProxyUtils.WriteErrorAsync(result.Response.ResponseCode, result.Response.ErrorMessage, context.Response);
+						}
+						else
+						{
+							_logger.LogInformation("Rejected websocket request[{requestId}] to path [{subdomain}:{path}] because of time out", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
+							await ProxyUtils.WriteErrorAsync(result.Error, context.Response);
+						}
 					}
 					else
 					{
-						_logger.LogInformation("Rejected websocket request[{requestId}] to path [{subdomain}:{path}] because of time out", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
-						await ProxyUtils.WriteErrorAsync(result.Error, context.Response);
+						_logger.LogInformation("Got http request[{requestId}] for path [{subdomain}:{path}]", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
+						var request = await ProxyUtils.ConstructProxyRequestAsync(context.Request, data);
+						var result = await connection.HandleHttpRequestAsync(request);
+						if (result.Success)
+						{
+							await ProxyUtils.WriteResponseToPipelineAsync(result.Response, context.Response);
+							_logger.LogInformation("Answered http request[{requestId}] to path [{subdomain}:{path}], result success: {status}", data.LogValue, id, context.Request.GetEncodedPathAndQuery(), result.Response.StatusCode);
+						}
+						else
+						{
+							await ProxyUtils.WriteErrorAsync(result.Error, context.Response);
+							_logger.LogInformation("Answered http request[{requestId}] to path [{subdomain}:{path}], result error: {status} {message}", data.LogValue, id, context.Request.GetEncodedPathAndQuery(), result.Error.StatusCode, result.Error.Message);
+						}
 					}
 				}
 				else
 				{
-					_logger.LogInformation("Got http request[{requestId}] for path [{subdomain}:{path}]", data.LogValue, id, context.Request.GetEncodedPathAndQuery());
-					var request = await ProxyUtils.ConstructProxyRequestAsync(context.Request, data);
-					var result = await connection.HandleHttpRequestAsync(request);
-					if (result.Success)
-					{
-						await ProxyUtils.WriteResponseToPipelineAsync(result.Response, context.Response);
-						_logger.LogInformation("Answered http request[{requestId}] to path [{subdomain}:{path}], result success: {status}", data.LogValue, id, context.Request.GetEncodedPathAndQuery(), result.Response.StatusCode);
-					}
-					else
-					{
-						await ProxyUtils.WriteErrorAsync(result.Error, context.Response);
-						_logger.LogInformation("Answered http request[{requestId}] to path [{subdomain}:{path}], result error: {status} {message}", data.LogValue, id, context.Request.GetEncodedPathAndQuery(), result.Error.StatusCode, result.Error.Message);
-					}
+					await ProxyUtils.WriteErrorAsync(StatusCodes.Status401Unauthorized, "Include a devprxy-auth query or cookie", context.Response);
 				}
 
 				return true;

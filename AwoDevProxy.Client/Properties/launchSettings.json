@@ -2,7 +2,12 @@
   "profiles": {
     "AwoDevProxy.Client": {
       "commandName": "Project",
-      "commandLineArgs": "--try-reopen --proxy wss://devprxy.aeol.in --name frontend --local http://localhost:3000 --key VnfbeZoEdwAT@BkE3Mz854tw8qj%p$i%#9G*PA!mU6Ur*cbh$%Q!hm8vCCfJiPY8"
+      "commandLineArgs": "run --password test1234 --server-timeout 0:0:45 --try-reopen --proxy wss://localhost:7081 --name test --local http://localhost:3000 --key 3@rkRdrki^v@aB^@pDF6LgGgC%^6X9UU"
+    },
+    "WSL": {
+      "commandName": "WSL2",
+      "commandLineArgs": "AwoDevProxy.Client.dll --server-timeout 0:0:45 --try-reopen --proxy wss://devprxy.com --name jupyter --local http://localhost:8888 --key VnfbeZoEdwAT@BkE3Mz854tw8qj%p$i%#9G*PA!mU6Ur*cbh$%Q!hm8vCCfJiPY8",
+      "distributionName": ""
     }
   }
 }
