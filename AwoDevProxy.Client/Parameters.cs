@@ -10,7 +10,7 @@ namespace AwoDevProxy.Client
 {
 	public class Parameters : ICommandParameterSet
 	{
-		[Option("proxy", ['c'], Description = "The address of the proxy server to connect to.")]
+		[Option("proxy", ['s'], Description = "The address of the proxy server to connect to.")]
 		public required string ProxyAddress { get; set; }
 
 		[Option("name", ['n'], Description = "The subdomain the client should be reachable.")]
@@ -23,7 +23,7 @@ namespace AwoDevProxy.Client
 		public required string AuthKey { get; set; }
 
 		[HasDefaultValue]
-		[Option("buffer", Description = "The size of the buffer to use for the connection.")]
+		[Option("buffer-size", ['b'], Description = "The size of the buffer to use for the connection.")]
 		public int BufferSize { get; set; } = 8192;
 
 		[HasDefaultValue]
