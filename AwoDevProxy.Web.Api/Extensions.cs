@@ -17,6 +17,24 @@ namespace AwoDevProxy.Web.Api
 			return context.GetServerVariable("REMOTE_ADDR");
 		}
 
+		public static byte[] SetLength(this byte[] array, int length, byte padding = 0)
+		{
+			if (array.Length == length)
+				return array;
+
+			if(array.Length < length)
+			{
+				var newArray = new byte[length];
+				Array.Copy(array, newArray, array.Length);
+				newArray.AsSpan().Slice(array.Length).Fill(padding);
+				return newArray;
+			}
+			else
+			{
+				return array.AsSpan().Slice(length).ToArray();
+			}
+		}
+
 		public static ProxyRequestData GetProxyData(this HttpContext context)
 		{
 			if (context.Items.TryGetValue(nameof(ProxyRequestData), out var data))

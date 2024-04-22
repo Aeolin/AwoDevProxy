@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\AwoDevProxy.Lib\AwoDevProxy.Lib.csproj" />
     <ProjectReference Include="..\AwoDevProxy.Shared\AwoDevProxy.Shared.csproj" />
+    <ProjectReference Include="..\AwoDevProxy.Web.Api\AwoDevProxy.Web.Api.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,111 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title>Authentication Required</title>
+	<style>
+		:root {
+			--accent-color: #ff7541;
+			--background-primary: #1a1f2e;
+			--background-secondary: #0b0d14;
+			--text-color: #f5f5f5;
+			--foreground-color: #f0f0f0
+		}
+
+		body,
+		html {
+			margin: 0;
+			height: 100%;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			font-family: Arial, sans-serif;
+			background-color: var(--background-secondary);
+			color: var(--text-color);
+				/* Sets a nice readable font */
+		}
+
+		/* Centered container style */
+		.centered-container {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			width: 100%;
+			min-width: 50vh;
+			min-height: 20vh;
+			background-color: var(--background-primary);
+			border-radius: 0.5em;
+			padding: 2em;
+			box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+		}
+
+		/* Flexbox container styles */
+		.flexbox-container {
+			display: flex;
+			justify-content: space-around;
+			align-items: center;
+			width: 100%;
+			flex-flow: column;
+			gap: 1em;
+		}
+
+		h1 {
+			padding-bottom: 2em;
+		}
+
+		form {
+			width: 100%;
+			align-self: center;
+		}
+
+		form input {
+			width: 90%;
+			height: 2.5em;
+			font-size: 1em;
+			background-color: var(--foreground-color);
+			border-radius: 0.25em;
+			padding-left: 1em;
+			border: 3px solid transparent;
+		}
+
+		form input:focus {
+			border-color: var(--accent-color);
+			outline: none !important;
+			box-shadow: 0 0 5px var(--accent-color);
+			transition: box-shadow 0.2s ease-in-out, border 0.2s ease-in;
+		}
+
+		form button {
+			background-color: var(--foreground-color);
+			width: 8em;
+			height: 2.5em;
+			font-size: 1.25em;
+			font-weight: bold;
+			align-self: center;
+			border-radius: 0.25em;
+			border: none;
+		}
+
+		form button:hover {
+			background-color: var(--accent-color);
+			color: var(--text-color);
+			transition: background-color 0.1s ease-in, color 0.1s ease-in;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="centered-container">
+		<div class="flexbox-container">
+			<h1>Authentication Required</h1>
+			<form action="/" method="post"  class="flexbox-container">
+				<input  id="password" class="form-component" name="{AuthParamName}" placeholder="Password" type="password" />
+				<button id="submit" class="btn" type="submit">Enter</button>
+			</form>
+		</div>
+	</div>
+	</div>
+</body>
+
+</html>

@@ -2,7 +2,6 @@
 using AwoDevProxy.Shared.Messages;
 using AwoDevProxy.Shared.Proxy;
 using AwoDevProxy.Shared.Utils;
-using Isopoh.Cryptography.Argon2;
 using MessagePack;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IO;
@@ -12,6 +11,8 @@ using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Reflection;
 using System.Security;
+using System.Security.Cryptography;
+using System.Text;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AwoDevProxy.Web.Api.Proxy
@@ -22,7 +23,7 @@ namespace AwoDevProxy.Web.Api.Proxy
 
 		public WebSocket Socket { get; init; }
 		public Task<IActionResult> SocketTask { get; init; }
-		public Guid? AuthCookie { get; init; }
+		public byte[] AuthFingerprint { get; init; }
 		
 		private int _bufferSize;
 		private readonly CancellationTokenSource _cancelSource;
@@ -48,7 +49,7 @@ namespace AwoDevProxy.Web.Api.Proxy
 			_logger = factory.CreateLogger($"{nameof(ProxyConnection)}[{name}]");
 			SocketTask = SocketWaitLoop();
 			_password = password;
-			AuthCookie = password == null ? null : Guid.NewGuid();
+			AuthFingerprint = password == null ? null : MD5.HashData(Encoding.UTF8.GetBytes($"{name}#{password}"));
 		}
 
 		private readonly RecyclableMemoryStreamManager _streamManager;

@@ -1,5 +1,6 @@
 using AwoDevProxy.Web.Api.Middleware;
 using AwoDevProxy.Web.Api.Proxy;
+using AwoDevProxy.Web.Api.Service.Cookies;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IO;
 
@@ -13,6 +14,8 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton(config.GetSection("ProxyConfig").Get<ProxyConfig>());
+builder.Services.AddSingleton(config.GetSection("CookieConfig").Get<CookieConfig>());
+builder.Services.AddSingleton<ICookieService, CookieService>();
 builder.Services.AddSingleton<RecyclableMemoryStreamManager>();
 builder.Services.AddSingleton<IProxyManager, ProxyManager>();
 
@@ -29,6 +32,8 @@ app.UseCors(opts =>
 
 app.UseWebSockets();
 app.UseMiddleware<ProxyRootingMiddleware>();
+app.UseMiddleware<ProxyAuthenticationMiddleware>();
+app.UseMiddleware<ProxyHandlingMiddleware>();
 
 
 if (app.Environment.IsDevelopment())

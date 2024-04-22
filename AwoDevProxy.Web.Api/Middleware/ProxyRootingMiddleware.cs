@@ -32,13 +32,10 @@ namespace AwoDevProxy.Web.Api.Middleware
 				var domain = host.Substring(split+1);
 				if (_domains.Contains(domain.ToLower()) && await _proxy.IsProxyAvailableAsync(key))
 				{
-					var data = new ProxyRequestData();
+					var data = new ProxyRequestData(key);
 					context.AddProxyData(data);
 					context.TraceIdentifier = data.LogValue;
-					_logger.LogInformation("Proxy request[{requestId}] from {userIp} to {method} {url}", data.LogValue, context.GetUserHostAddress(), context.Request.Method, context.Request.GetDisplayUrl());
-					var result = await _proxy.HandleProxyAsync(key, context);
-					_logger.LogInformation("Request[{requestId}] handeled successfully: {result}", data.LogValue, result);
-					return;
+					_logger.LogInformation("Rooted Request[{requestId}] for {method} {url}", data.LogValue, context.Request.Method, context.Request.GetDisplayUrl());	
 				}
 			}
 

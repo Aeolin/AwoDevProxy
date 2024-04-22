@@ -44,9 +44,9 @@ namespace AwoDevProxy.Web.Api.Proxy
 			return WriteErrorAsync(error.StatusCode, error.Message, response);
 		}
 
-		internal static async Task WriteRedirectAsync(HttpResponse response, string url)
+		internal static async Task WriteRedirectAsync(HttpResponse response, string url, int code = StatusCodes.Status302Found)
 		{
-			response.StatusCode = StatusCodes.Status302Found;
+			response.StatusCode = code;
 			response.Headers.Location = url;
 			await response.CompleteAsync();
 		}

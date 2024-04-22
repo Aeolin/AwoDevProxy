@@ -6,7 +6,9 @@ namespace AwoDevProxy.Web.Api.Proxy
 	public interface IProxyManager
 	{
 		public Task<bool> IsProxyAvailableAsync(string id);
-		public Task<bool> HandleProxyAsync(string id, HttpContext context);
+		public Task<bool> HandleProxyAsync(HttpContext context);
+		public bool RequiresAuthentication(HttpContext context, out string password, out byte[] fingerPrint);
+
 		public Task<IActionResult> SetupProxy(string name, WebSocket socket, TimeSpan timeout, string password = null);
 	}
 }
