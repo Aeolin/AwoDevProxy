@@ -37,6 +37,9 @@ namespace AwoDevProxy.Lib
 		{
 			Config = config;
 			_http = new HttpClient() { BaseAddress = new Uri(config.LocalAddress) };
+			if (config.RequestTimeout.HasValue)
+				_http.Timeout = config.RequestTimeout.Value;
+
 			_buffer = new byte[config.BufferSize];
 			_logger = factory?.CreateLogger<ProxyEndpoint>();
 			_streamManager=manager ?? new RecyclableMemoryStreamManager();
