@@ -60,6 +60,10 @@ namespace AwoDevProxy.Shared.Proxy
 				{
 					// do nothing, somehow websocket first realises it's in the aborted state once CloseAsync get's called
 				}
+				finally
+				{
+					_socket.Dispose();
+				}
 			}
 		}
 	}

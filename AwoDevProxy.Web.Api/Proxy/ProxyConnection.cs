@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
@@ -24,7 +25,7 @@ namespace AwoDevProxy.Web.Api.Proxy
 		public WebSocket Socket { get; init; }
 		public Task<IActionResult> SocketTask { get; init; }
 		public byte[] AuthFingerprint { get; init; }
-		
+
 		private int _bufferSize;
 		private readonly CancellationTokenSource _cancelSource;
 		private readonly TimeSpan _timeout;
@@ -81,8 +82,8 @@ namespace AwoDevProxy.Web.Api.Proxy
 						{
 							if (data.MessageType == WebSocketMessageType.Close)
 							{
-								await proxy.CloseAsync();
 								_logger.LogDebug("Got packet[{packetType}] from client for websocket[{requestId}] close", key, data.SocketId);
+								await CloseWebSocketProxyAsync(data.SocketId, false);
 							}
 							else
 							{
@@ -99,9 +100,7 @@ namespace AwoDevProxy.Web.Api.Proxy
 					{
 						var close = (ProxyWebSocketClose)packet;
 						_logger.LogDebug("Got packet[{packetType}] from client for websocket[{requestId}] close", key, close.SocketId);
-						if (_webSocketProxies.TryGetValue(close.SocketId, out var proxy))
-							await proxy.CloseAsync();
-
+						await CloseWebSocketProxyAsync(close.SocketId, false);
 						break;
 					}
 			}
@@ -116,11 +115,16 @@ namespace AwoDevProxy.Web.Api.Proxy
 			await stream.DisposeAsync();
 		}
 
-		private async Task RemoveWebSocketProxyAsync(WebSocketProxy proxy)
+		private async Task CloseWebSocketProxyAsync(Guid proxyId, bool notifyClient)
 		{
-			_webSocketProxies.Remove(proxy.Id, out _);
-			var message = new ProxyWebSocketClose { SocketId = proxy.Id };
-			await SendPacketAsync(message);
+			if (_webSocketProxies.Remove(proxyId, out var proxy))
+			{
+				if (notifyClient)
+					await SendPacketAsync(new ProxyWebSocketClose { SocketId = proxy.Id });
+
+				await proxy.CloseAsync();
+			}
+
 			_logger.LogDebug("Closed WebSocketProxy[{id}]", proxy.Id);
 		}
 
@@ -131,7 +135,7 @@ namespace AwoDevProxy.Web.Api.Proxy
 			while ((read = await proxy.ReadAsync()).IsOpen)
 				await SendPacketAsync(read.DataFrame);
 
-			await RemoveWebSocketProxyAsync(proxy);
+			await CloseWebSocketProxyAsync(proxy.Id, true);
 		}
 
 		public async Task<WebSocketResult> OpenWebSocketProxyAsync(ProxyWebSocketOpen model)
