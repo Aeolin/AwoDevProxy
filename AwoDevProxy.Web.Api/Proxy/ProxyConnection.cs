@@ -123,9 +123,8 @@ namespace AwoDevProxy.Web.Api.Proxy
 					await SendPacketAsync(new ProxyWebSocketClose { SocketId = proxy.Id });
 
 				await proxy.CloseAsync();
+				_logger.LogDebug("Closed WebSocketProxy[{id}]", proxyId);
 			}
-
-			_logger.LogDebug("Closed WebSocketProxy[{id}]", proxy.Id);
 		}
 
 		public async Task HandleWebSocketProxyAsync(WebSocketProxy proxy)
