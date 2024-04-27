@@ -104,5 +104,5 @@ The Api understands the following config parameters
 4. run `docket compose up -d`
 
 ## Motivation 
-I know Microsoft DevTunnels exists, allowing greated flexibility. Altough you have to use microsoft tools to use it and you can't lock it do one service specifically.
+I know Microsoft DevTunnels exists, allowing greater flexibility. Altough you have to use microsoft tools to use it and you can't lock it do one service specifically.
 This Projects aims to be an self hostable alternative with it's main focus for easy access to services in environments where one can't easily forward or open ports.
