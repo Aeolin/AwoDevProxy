@@ -68,6 +68,7 @@ The Api will also use Environment Variables as configuration parameters with the
 
 The Api understands the following config parameters
 ```json
+{
   "ProxyConfig": {
     "FixedKey": "3@rkRdrki^v@aB^@pDF6LgGgC%^6X9UU",
     "MaxTimeout": "0:5:00",
@@ -83,6 +84,7 @@ The Api understands the following config parameters
     "FingerPrint": "DEVPRXY!",
     "AesBlockSize": 128
   }
+}
 ```
 
 | Config       | Parameter      | Description                                                                                                                                                                                       |
