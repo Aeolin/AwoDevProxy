@@ -28,11 +28,17 @@ namespace AwoDevProxy.Web.Api.Middleware
 		public bool IsCookieAuthenticated(HttpContext context, byte[] fingerPrint) => context.Request.Cookies.TryGetValue(_config.AuthParamName, out var authCookie) && _cookieService.IsValid(authCookie, fingerPrint);
 		public bool IsHeaderAuthenticated(HttpContext context, string password)
 		{
-			if(context.Request.Headers.TryGetValue(_config.AuthParamName, out var key) == false)
-				if(context.Request.Headers.Authorization.First().StartsWith("Bearer", StringComparison.OrdinalIgnoreCase))
-					key = context.Request.Headers.Authorization.First().Substring(6).Trim();
+			if (context.Request.Headers.TryGetValue(_config.AuthParamName, out var keys))
+			{
+				return password == keys.First();
+			}
+			else
+			{
+				if (context.Request.Headers.TryGetValue("Authorization", out var authorization) && authorization.First().StartsWith("Bearer", StringComparison.OrdinalIgnoreCase))
+					return password == authorization.First().Substring(6).Trim();
+			}
 
-			return key == password;
+			return false;
 		}
 
 
@@ -41,7 +47,7 @@ namespace AwoDevProxy.Web.Api.Middleware
 			var data = context.GetProxyData();
 			if (data != null && _manager.RequiresAuthentication(context, out var password, out var fingerPrint))
 			{
-				if(IsHeaderAuthenticated(context, password))
+				if (IsHeaderAuthenticated(context, password))
 				{
 					await _next.Invoke(context);
 					_logger.LogInformation("Header Authentication passed for Request[{requestId}]", data.LogValue);
