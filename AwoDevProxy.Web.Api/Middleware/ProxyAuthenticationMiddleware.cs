@@ -26,12 +26,28 @@ namespace AwoDevProxy.Web.Api.Middleware
 
 		public bool IsQueryAuthenticated(HttpContext context, string password) => context.Request.Query.TryGetValue(_config.AuthParamName, out var key) && password.Equals(key.First()) == true;
 		public bool IsCookieAuthenticated(HttpContext context, byte[] fingerPrint) => context.Request.Cookies.TryGetValue(_config.AuthParamName, out var authCookie) && _cookieService.IsValid(authCookie, fingerPrint);
+		public bool IsHeaderAuthenticated(HttpContext context, string password)
+		{
+			if(context.Request.Headers.TryGetValue(_config.AuthParamName, out var key) == false)
+				if(context.Request.Headers.Authorization.First().StartsWith("Bearer", StringComparison.OrdinalIgnoreCase))
+					key = context.Request.Headers.Authorization.First().Substring(6).Trim();
+
+			return key == password;
+		}
+
 
 		public async Task InvokeAsync(HttpContext context)
 		{
 			var data = context.GetProxyData();
 			if (data != null && _manager.RequiresAuthentication(context, out var password, out var fingerPrint))
 			{
+				if(IsHeaderAuthenticated(context, password))
+				{
+					await _next.Invoke(context);
+					_logger.LogInformation("Header Authentication passed for Request[{requestId}]", data.LogValue);
+					return;
+				}
+
 				if (context.Request.HasFormContentType && context.Request.Form.TryGetValue(_config.AuthParamName, out var key) && password.Equals(key.First()))
 				{
 					var cookie = _cookieService.CreateCookie(fingerPrint);

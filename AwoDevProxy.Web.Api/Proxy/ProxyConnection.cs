@@ -32,6 +32,10 @@ namespace AwoDevProxy.Web.Api.Proxy
 		private readonly TimedTaskHolder<Guid, ProxyHttpResponse> _openRequests;
 		private readonly TimedTaskHolder<Guid, ProxyWebSocketOpenAck> _openWebsockets;
 		private readonly ConcurrentDictionary<Guid, WebSocketProxy> _webSocketProxies;
+		private readonly RecyclableMemoryStreamManager _streamManager;
+
+		public event Action<ProxyConnection> SocketClosed;
+
 		private readonly ILogger _logger;
 		private readonly string _password;
 		public string Password => _password;
@@ -53,9 +57,6 @@ namespace AwoDevProxy.Web.Api.Proxy
 			AuthFingerprint = password == null ? null : MD5.HashData(Encoding.UTF8.GetBytes($"{name}#{password}"));
 		}
 
-		private readonly RecyclableMemoryStreamManager _streamManager;
-
-		public event Action<ProxyConnection> SocketClosed;
 
 
 		private async void HandlePacketReceived(Stream stream)

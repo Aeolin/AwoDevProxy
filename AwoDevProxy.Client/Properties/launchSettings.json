@@ -2,7 +2,7 @@
   "profiles": {
     "AwoDevProxy.Client": {
       "commandName": "Project",
-      "commandLineArgs": "run --password test1234 --server-timeout 0:0:45 --try-reopen --proxy wss://localhost:7081 --name test --local http://localhost:3000 --key 3@rkRdrki^v@aB^@pDF6LgGgC%^6X9UU"
+      "commandLineArgs": "--server-timeout 0:0:15 --try-reopen --proxy wss://localhost:7081 --name test --local https://ws.postman-echo.com --key 3@rkRdrki^v@aB^@pDF6LgGgC%^6X9UU"
     },
     "WSL": {
       "commandName": "WSL2",
