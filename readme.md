@@ -7,21 +7,21 @@ DevProxy allows you to connect your localhost projects temporarily to the intern
 ## How does it work?
 ![DevProxy Diagram](./.media/devproxy_scheme.png)
 
-DevProxies works by giving you a unique subdomain on the public api server. All requests to this subdomain will then be forwarded to the locally running DevProxy Client which then will call your local service, returning the results to the API.
-The Client will open an outgoing WebSocket to the Api so no portforwarding on the client side is necessary
+DevProxies works by giving you a unique subdomain on the public API server. All requests to this subdomain will then be forwarded to the locally running DevProxy Client which then will call your local service, returning the results to the API.
+The Client will open an outgoing WebSocket to the API so no port-forwarding on the client side is necessary
 
 ## Security
-Since this project was just build as a weekend project security wasn't my primary concern. 
-Internally the client just uses the local url as the BaseUrl in .NETs HttpClient, i don't know if there are any escapes where one can circumvent this (maybe by setting custom headers)
-If you know more about this or want to help me improve the security open an issue or contact me under aeolin@aeol.in
+Since this project was built as a weekend project security wasn't my primary concern. 
+Internally the client uses the local URL as the BaseURL in the .NETs HttpClient, I don't know if there are any escapes where one can circumvent this (maybe by setting custom headers)
+If you know more about this or want to help me improve the security open an issue or contact me at aeolin@aeol.in
 
 ## Compilation
-First install .Net 8 SDK [Install Instructions](https://github.com/dotnet/core/blob/main/release-notes/8.0/install.md)
+First, install .Net 8 SDK [Install Instructions](https://github.com/dotnet/core/blob/main/release-notes/8.0/install.md)
 Then just run `dotnet publish -c Release` inside the root folder
 
 ## Client Usage
-To install the client either copy the compilation output of AwoDevProxy.Client to your /bin folder on linux or C:\Windows\system32
-For linux also an install script `install-client-linux` is included in the repo which updates / installs the client into `~/.local/bin/devprxy`
+To install the client either copy the compilation output of AwoDevProxy.Client to your /bin folder on Linux or C:\Windows\system32 on Windows.
+For Linux also an install script `install-client-linux` is included in the repo which updates/installs the client into `~/.local/bin/devprxy`
 
 ```sh
 devprxy --proxy wss://devproxy-public-api.com --name my-subdomain --local http://localhost:1302 --key api_key-1234 --server-timeout 0:1:30 --try-reopen 
@@ -30,29 +30,29 @@ devprxy --proxy wss://devproxy-public-api.com --name my-subdomain --local http:/
 The client supports the following arguments (also available under `devprxy --help`)
 | Shorthand | Argument          | Description                                                               |
 | --------- | ----------------- | ------------------------------------------------------------------------- |
-| -s        | --proxy           | Address of the public api the client should connect to                    |
+| -s        | --proxy           | Address of the public API the client should connect to                    |
 | -l        | --local           | Address of the local service the client should proxy requests to          |
 | -n        | --name            | The name of the subdomain the client should be accessible under           |
-| -k        | --key             | Api key for the public Api                                                |
-| -t        | --server-timeout  | After how much time the public Api should handle the request as timed out |
-| -r        | --try-reopen      | Automatically try to reopen the connection to the api when it was lost    |
+| -k        | --key             | Api key for the public API                                                |
+| -t        | --server-timeout  | After how much time the public API should handle the request as timed out |
+| -r        | --try-reopen      | Automatically try to reopen the connection to the API when it was lost    |
 | -b        | --buffer-size     | How large the local read buffer should be, defaults to 8kb                |
-| -f        | --force           | Forcefully discconects existing client with same name from server         |
+| -f        | --force           | Forcefully disconnects existing client with the same name from server     |
 | -p        | --password        | Password for the resource which the server enforces                       |
 | -h        | --help            | Shows the help message                                                    |
 
 ## Client Password
 If the client passes a password to the server with the `--password` parameter, the server will redirect all requests to a password page. Once the password is entered the server will issue an auth cookie.
 In Environments where cookies are not supported the server will also accept the password as a query parameter. The name of the auth parameter can be set with `AuthParamName` in the server config, the default is `devprxy-auth`.
-The cookie can also be gained programattically by performing a post request against the subdomain with the password set as a form field named after `AuthParamName`
+The cookie can also be gained programmatically by performing a post request against the subdomain with the password set as a form field named after `AuthParamName`
 
 ## Cookie Generation
 The cookie is generated by the server using the following algorithm
-1. A 16 byte Fingerprint for the client is generated by concatenating Name and Password with a '#' sign and hashed using MD5
+1. A 16-byte Fingerprint for the client is generated by concatenating Name and Password with a '#' sign and hashed using MD5
 2. The Api Fingerprint from the `CookieConfig` is read 
-3. A 8 byte Timestamp is generated from DateTime.UtcNow.Ticks
-4. The Api Fingerprint, The Client Fingerprint and the Timestamp are written to an array in this order          
-5. The array get's encrypted using AES ECB with the `SigningKey` and `SigningIV` from the `CookieConfig` and then base64 encoded
+3. An 8-byte Timestamp is generated from DateTime.UtcNow.Ticks
+4. The Api Fingerprint, The Client Fingerprint, and the Timestamp are written to an array in this order          
+5. The array gets encrypted using AES ECB with the `SigningKey` and `SigningIV` from the `CookieConfig` and then base64 encoded
 6. The encrypted array gets Base64 encoded and returned as the cookie
 
 ## Cookie Validation
@@ -64,10 +64,11 @@ The cookie is only seen as valid if the following conditions are met
 
 ## Server Usage
 For Server deployment use the supplied Dockerfile in `AwoDevProxy.Api` or the supplied compose file
-The Api will also use Environment Variables as configuration parameters with the default asp.net mapping (ProxyConfig.FixedKey -> PROXYCONFIG__FIXEDKEY)
+The API will also use Environment Variables as configuration parameters with the default asp.net mapping (ProxyConfig.FixedKey -> PROXYCONFIG__FIXEDKEY)
 
-The Api understands the following config parameters
+The API understands the following config parameters
 ```json
+{
   "ProxyConfig": {
     "FixedKey": "3@rkRdrki^v@aB^@pDF6LgGgC%^6X9UU",
     "MaxTimeout": "0:5:00",
@@ -83,18 +84,19 @@ The Api understands the following config parameters
     "FingerPrint": "DEVPRXY!",
     "AesBlockSize": 128
   }
+}
 ```
 
 | Config       | Parameter      | Description                                                                                                                                                                                       |
 | ------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ProyxConfig  | FixedKey       | This parameter sets the api key the client is requested to send on connection                                                                                                                     |
+| ProyxConfig  | FixedKey       | This parameter sets the API key the client is requested to send on connection                                                                                                                     |
 | ProyxConfig  | MaxTimeout     | The maximum allowed timeout a client can request, if the client requests a longer value MaxTimeout is used instead                                                                                |
 | ProyxConfig  | DefaultTimeout | The default timeout which is used when the client doesn't specify                                                                                                                                 |
-| ProyxConfig  | Domains        | Array of domains which the server should use for forwarding, if the domain contains a subdomain, the server expects the client name to be the first parameter (client-name.subdomain.exmaple.com) |
+| ProyxConfig  | Domains        | Array of domains that the server should use for forwarding, if the domain contains a subdomain, the server expects the client name to be the first parameter (client-name.subdomain.exmaple.com) |
 | ProyxConfig  | AuthParamName  | The name of the Authentication parameter which must be passed for clients setting a password                                                                                                      |
-| CookieConfig | SigningKey     | The aes key used for cookie encrcryption, internally this value get's MD5 hashed before usage                                                                                                     |
+| CookieConfig | SigningKey     | The AES key used for cookie encryption, internally this value gets MD5 hashed before usage                                                                                                     |
 | CookieConfig | SigningIV      | The aes IV used for cookie encryption, encoded in Base64, if the IV is longer than the `AesBlockSize` it gets truncated if it's shorter it gets padded with zeroes                                |
-| CookieConfig | FingerPrint    | The fingerprint used for the api, this value is used to identify the cookie for being generated by this server instance                                                                           |
+| CookieConfig | FingerPrint    | The fingerprint used for the API, this value is used to identify the cookie being generated by this server instance                                                                           |
 | CookieConfig | AesBlockSize   | The block size used for the AES encryption, the default is 128. (I don't know why anyone would want to alter this, afaik 128 is the only option supported by .Net 8 AesCng)                       |                                                                                                                                   |
 
 ### Docker installation
@@ -104,5 +106,5 @@ The Api understands the following config parameters
 4. run `docket compose up -d`
 
 ## Motivation 
-I know Microsoft DevTunnels exists, allowing greater flexibility. Altough you have to use microsoft tools to use it and you can't lock it do one service specifically.
-This Projects aims to be an self hostable alternative with it's main focus for easy access to services in environments where one can't easily forward or open ports.
+I know Microsoft DevTunnels exists, allowing greater flexibility. Although Microsoft's tools are required to use it, and you can't lock it to one service specifically.
+This Project aims to be a self-hostable alternative focusing on easy access to services in environments where one can't easily forward or open ports.
