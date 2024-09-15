@@ -33,6 +33,7 @@ namespace AwoDevProxy.Web.Api.Proxy
 		private readonly TimedTaskHolder<Guid, ProxyWebSocketOpenAck> _openWebsockets;
 		private readonly ConcurrentDictionary<Guid, WebSocketProxy> _webSocketProxies;
 		private readonly RecyclableMemoryStreamManager _streamManager;
+		private readonly SemaphoreSlim _webSocketLock = new SemaphoreSlim(1, 1);
 
 		public event Action<ProxyConnection> SocketClosed;
 
@@ -112,7 +113,17 @@ namespace AwoDevProxy.Web.Api.Proxy
 			var stream = _streamManager.GetStream();
 			var key = PacketSerializer.Serialize<MessageType>(packet, (IBufferWriter<byte>)stream);
 			_logger.LogDebug("Sent packet[{packetType}] to client with {dataAmount} bytes", key, stream.Length);
-			await Socket.SendAsync(stream.GetReadOnlySequence(), _cancelSource.Token);
+			await _webSocketLock.WaitAsync();
+			
+			try
+			{
+				await Socket.SendAsync(stream.GetReadOnlySequence(), _cancelSource.Token);
+			}
+			finally
+			{
+				_webSocketLock.Release();
+			}
+
 			await stream.DisposeAsync();
 		}
 
