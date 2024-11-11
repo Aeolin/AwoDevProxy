@@ -29,6 +29,7 @@ namespace AwoDevProxy.Lib
 		private TaskManager _taskManager;
 		private ClientWebSocket _webSocket;
 		private ILogger _logger;
+		private SemaphoreSlim _webSocketLock = new SemaphoreSlim(1, 1);
 
 		private const int RECONNECT_DELAY = 5;
 		private const int MAX_RECCONECT_DELAY = 60;
@@ -107,7 +108,9 @@ namespace AwoDevProxy.Lib
 		{
 			var mem = _streamManager.GetStream();
 			PacketSerializer.Serialize<MessageType>(packet, (IBufferWriter<byte>)mem);
+			await _webSocketLock.WaitAsync();
 			await _webSocket.SendAsync(mem.GetReadOnlySequence(), _cancelToken.Token);
+			_webSocketLock.Release();
 			await mem.DisposeAsync();
 		}
 

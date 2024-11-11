@@ -23,7 +23,16 @@ namespace AwoDevProxy.Lib
 				httpRequest.Content = new ByteArrayContent(request.Body);
 
 			foreach (var header in ProxyConstants.FilterHeaders(request.Headers))
-				httpRequest.Headers.TryAddWithoutValidation(header.Key, header.Value);
+			{
+				if (ProxyConstants.CONTENT_HEADERS.Contains(header.Key))
+				{
+					httpRequest.Content?.Headers?.TryAddWithoutValidation(header.Key, header.Value);
+				}
+				else
+				{
+					httpRequest.Headers.TryAddWithoutValidation(header.Key, header.Value);
+				}
+			}
 
 			return httpRequest;
 		}
