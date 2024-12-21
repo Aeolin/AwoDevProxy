@@ -26,7 +26,7 @@ namespace AwoDevProxy.Web.Api.Controllers
 				return BadRequest("Expected WebSocket Environment");
 			}
 
-			if(authHeaderScheme.Contains(" "))
+			if(authHeaderScheme?.Contains(" ") ?? false)
 			{
 				_logger.LogInformation("Declined /ws request because authHeaderScheme contains a space");
 				return StatusCode(StatusCodes.Status400BadRequest, "Invalid authHeaderScheme");
