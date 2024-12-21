@@ -26,16 +26,13 @@ namespace AwoDevProxy.Web.Api.Middleware
 
 		public bool IsQueryAuthenticated(HttpContext context, string password) => context.Request.Query.TryGetValue(_config.AuthParamName, out var key) && password.Equals(key.First()) == true;
 		public bool IsCookieAuthenticated(HttpContext context, byte[] fingerPrint) => context.Request.Cookies.TryGetValue(_config.AuthParamName, out var authCookie) && _cookieService.IsValid(authCookie, fingerPrint);
-		public bool IsHeaderAuthenticated(HttpContext context, string password)
+		public bool IsHeaderAuthenticated(HttpContext context, string authScheme, string password)
 		{
-			if (context.Request.Headers.TryGetValue(_config.AuthParamName, out var keys))
+			var header = context.Request.Headers.Authorization.FirstOrDefault(x => x.StartsWith(authScheme, StringComparison.OrdinalIgnoreCase));
+			if(header != null)
 			{
-				return password == keys.First();
-			}
-			else
-			{
-				if (context.Request.Headers.TryGetValue("Authorization", out var authorization) && authorization.First().StartsWith("Bearer", StringComparison.OrdinalIgnoreCase))
-					return password == authorization.First().Substring(6).Trim();
+				var key = header.Substring(authScheme.Length).Trim();
+				return password == key;
 			}
 
 			return false;
@@ -45,9 +42,17 @@ namespace AwoDevProxy.Web.Api.Middleware
 		public async Task InvokeAsync(HttpContext context)
 		{
 			var data = context.GetProxyData();
-			if (data != null && _manager.RequiresAuthentication(context, out var password, out var fingerPrint))
+			if (data != null && _manager.RequiresAuthentication(context, out var password, out var authScheme, out var fingerPrint))
 			{
-				if (IsHeaderAuthenticated(context, password))
+				if (IsCookieAuthenticated(context, fingerPrint) == false && IsQueryAuthenticated(context, password) == false)
+				{
+					var content = File.ReadAllText("wwwroot/Login.html").Replace("{AuthParamName}", _config.AuthParamName);
+					await ProxyUtils.WriteErrorAsync(StatusCodes.Status401Unauthorized, content, context.Response);
+					_logger.LogInformation("Access denied for Request[{requestId}], returned login page", data.LogValue);
+					return;
+				}
+
+				if (IsHeaderAuthenticated(context, authScheme, password))
 				{
 					await _next.Invoke(context);
 					_logger.LogInformation("Header Authentication passed for Request[{requestId}]", data.LogValue);
@@ -61,14 +66,6 @@ namespace AwoDevProxy.Web.Api.Middleware
 					context.Response.Cookies.Append(_config.AuthParamName, cookie);
 					await ProxyUtils.WriteRedirectAsync(context.Response, context.Request.GetEncodedUrl(), StatusCodes.Status303SeeOther);
 					_logger.LogInformation("Created Authentication Cookie for Request[{requestId}]", data.LogValue);
-					return;
-				}
-
-				if (IsCookieAuthenticated(context, fingerPrint) == false && IsQueryAuthenticated(context, password) == false)
-				{
-					var content = File.ReadAllText("wwwroot/Login.html").Replace("{AuthParamName}", _config.AuthParamName);
-					await ProxyUtils.WriteErrorAsync(StatusCodes.Status401Unauthorized, content, context.Response);
-					_logger.LogInformation("Access denied for Request[{requestId}], returned login page", data.LogValue);
 					return;
 				}
 			}

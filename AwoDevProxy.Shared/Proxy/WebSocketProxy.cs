@@ -12,6 +12,7 @@ namespace AwoDevProxy.Shared.Proxy
 		private CancellationTokenSource _cts;
 		private readonly WebSocket _socket;
 		private readonly byte[] _buffer;
+		private readonly SemaphoreSlim _sendLock = new SemaphoreSlim(1, 1);
 
 		public override string ToString() => $"{nameof(WebSocketProxy)}[{Id}]";
 
@@ -25,7 +26,15 @@ namespace AwoDevProxy.Shared.Proxy
 
 		public async Task SendAsync(ProxyWebSocketData data)
 		{
-			await _socket.SendAsync(data.Data, data.MessageType, data.EndOfMessage, _cts.Token);
+			await _sendLock.WaitAsync();
+			try
+			{
+				await _socket.SendAsync(data.Data, data.MessageType, data.EndOfMessage, _cts.Token);
+			}
+			finally
+			{
+				_sendLock.Release();
+			}
 		}
 
 		public async Task<WebSocketProxyReadResult> ReadAsync()
@@ -51,7 +60,7 @@ namespace AwoDevProxy.Shared.Proxy
 		{
 			if (IsOpen)
 			{
-				_cts.Cancel(); 
+				_cts.Cancel();
 				try
 				{
 					await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);

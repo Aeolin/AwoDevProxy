@@ -38,10 +38,11 @@ namespace AwoDevProxy.Web.Api.Proxy
 		public event Action<ProxyConnection> SocketClosed;
 
 		private readonly ILogger _logger;
-		private readonly string _password;
-		public string Password => _password;
+		public string Password { get; init; }
+		public string AuthHeaderScheme { get; init; }
 
-		public ProxyConnection(RecyclableMemoryStreamManager streamPool, string name, WebSocket socket, TimeSpan requestTimeout, ILoggerFactory factory, string password = null, int bufferSize = 4096)
+
+		public ProxyConnection(RecyclableMemoryStreamManager streamPool, string name, WebSocket socket, TimeSpan requestTimeout, ILoggerFactory factory, string password = null, string authHeaderScheme = null, int bufferSize = 4096)
 		{
 			Name = name;
 			Socket = socket;
@@ -54,7 +55,8 @@ namespace AwoDevProxy.Web.Api.Proxy
 			_streamManager = streamPool;
 			_logger = factory.CreateLogger($"{nameof(ProxyConnection)}[{name}]");
 			SocketTask = SocketWaitLoop();
-			_password = password;
+			Password = password;
+			AuthHeaderScheme = authHeaderScheme;
 			AuthFingerprint = password == null ? null : MD5.HashData(Encoding.UTF8.GetBytes($"{name}#{password}"));
 		}
 

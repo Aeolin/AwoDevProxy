@@ -18,12 +18,18 @@ namespace AwoDevProxy.Web.Api.Controllers
 
 		[Route("/ws")]
 		[ApiExplorerSettings(IgnoreApi = true)]
-		public async Task<IActionResult> SetupProxyAsync([FromQuery]string name, [FromQuery]bool force = false, [FromQuery]string authKey = null, [FromQuery]TimeSpan? requestTimeout = null, [FromQuery]string password = null)
+		public async Task<IActionResult> SetupProxyAsync([FromQuery]string name, [FromQuery]bool force = false, [FromQuery]string authKey = null, [FromQuery]TimeSpan? requestTimeout = null, [FromQuery]string password = null, [FromQuery]string authHeaderScheme = null)
 		{
 			if (HttpContext.WebSockets.IsWebSocketRequest == false)
 			{
 				_logger.LogInformation("Declined /ws requesnt since it wasn't a websocket request");
 				return BadRequest("Expected WebSocket Environment");
+			}
+
+			if(authHeaderScheme.Contains(" "))
+			{
+				_logger.LogInformation("Declined /ws request because authHeaderScheme contains a space");
+				return StatusCode(StatusCodes.Status400BadRequest, "Invalid authHeaderScheme");
 			}
 
 			if (_config.FixedKey != null && _config.FixedKey.Equals(authKey) == false)
@@ -44,7 +50,7 @@ namespace AwoDevProxy.Web.Api.Controllers
 				timeout = _config.MaxTimeout;
 
 			var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-			var proxyTask = _manager.SetupProxy(name, socket, timeout, password);
+			var proxyTask = _manager.SetupProxy(name, socket, timeout, password, authHeaderScheme);
 			_logger.LogInformation($"Accepted /ws request for name {name}");
 			await proxyTask;
 			return default;

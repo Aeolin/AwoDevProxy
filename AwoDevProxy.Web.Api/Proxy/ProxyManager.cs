@@ -56,7 +56,7 @@ namespace AwoDevProxy.Web.Api.Proxy
 			RemoveProxy(connection);
 		}
 
-		public Task<IActionResult> SetupProxy(string proxyName, WebSocket socket, TimeSpan requestTimeout, string password = null)
+		public Task<IActionResult> SetupProxy(string proxyName, WebSocket socket, TimeSpan requestTimeout, string password = null, string authHeaderName = null)
 		{
 			proxyName = proxyName.ToLower();
 			if (_connections.TryGetValue(proxyName, out ProxyConnection proxyConnection))
@@ -65,7 +65,7 @@ namespace AwoDevProxy.Web.Api.Proxy
 				_connections.Remove(proxyName);
 			}
 
-			proxyConnection = new ProxyConnection(_streamManager, proxyName, socket, requestTimeout, _factory, password, 4096*4);
+			proxyConnection = new ProxyConnection(_streamManager, proxyName, socket, requestTimeout, _factory, password, authHeaderName, 4096*4);
 			AddProxy(proxyConnection);
 			_logger.LogInformation("New Proxy listener for subdomain {subdomain} create with timeout {timeout}", proxyName, requestTimeout);
 			return proxyConnection.SocketTask;
@@ -90,18 +90,20 @@ namespace AwoDevProxy.Web.Api.Proxy
 			return Task.FromResult(false);
 		}
 
-		public bool RequiresAuthentication(HttpContext context, out string password, out byte[] fingerPrint)
+		public bool RequiresAuthentication(HttpContext context, out string password, out string authScheme, out byte[] fingerPrint)
 		{
 			var data = context.GetProxyData();
 			if (data != null && _connections.TryGetValue(data.ProxySubdomain, out var connection))
 			{
 				password = connection.Password;
+				authScheme = connection.AuthHeaderScheme ?? _config.DefaultAuthScheme;
 				fingerPrint = connection.AuthFingerprint;
 				return password != null;
 			}
 
 			password = null;
 			fingerPrint = null;
+			authScheme = null;
 			return false;
 		}
 

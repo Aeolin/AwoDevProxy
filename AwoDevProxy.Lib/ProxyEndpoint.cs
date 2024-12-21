@@ -160,10 +160,13 @@ namespace AwoDevProxy.Lib
 			{
 				{ "authKey", Config.AuthKey },
 				{ "bufferSize", Config.BufferSize.ToString() },
-				{ "name", Config.Name }
+				{ "name", Config.Name },
 			};
 			
-			if(Config.RequestTimeout.HasValue)
+			if(string.IsNullOrEmpty(Config.AuthHeaderScheme) == false)
+				queryValues.Add("authHeaderScheme", Config.AuthHeaderScheme);
+
+			if (Config.RequestTimeout.HasValue)
 				queryValues.Add("requestTimeout", Config.RequestTimeout.Value.ToString());
 
 			if(string.IsNullOrEmpty(Config.Password) == false)

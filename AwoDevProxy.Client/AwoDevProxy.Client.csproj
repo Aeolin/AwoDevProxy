@@ -7,7 +7,7 @@
     <Nullable>disable</Nullable>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
-    <VersionPrefix>0.5.1</VersionPrefix>
+    <VersionPrefix>0.5.2</VersionPrefix>
   </PropertyGroup>
 
   <ItemGroup>

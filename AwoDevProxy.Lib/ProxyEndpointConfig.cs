@@ -17,6 +17,7 @@ namespace AwoDevProxy.Lib
 		public bool TryReopen { get; init; }
 		public TimeSpan? RequestTimeout { get; init; }
 		public string Password { get; init; }
+		public string AuthHeaderScheme { get; init; }
 		public bool IsLocalSecure => LocalAddress.StartsWith("https") || LocalAddress.StartsWith("wss");
 		public string WebSocketScheme => IsLocalSecure ? "wss" : "ws";
 		public bool? ForceOpen { get; init; }
@@ -28,7 +29,7 @@ namespace AwoDevProxy.Lib
 		}
 
 		[JsonConstructor]
-		public ProxyEndpointConfig(string localAddress, string proxyServer, string name, string authKey, bool tryReopen, string? password = null, bool? force = null, int bufferSize = 2048, TimeSpan? requestTimeout = null)
+		public ProxyEndpointConfig(string localAddress, string proxyServer, string name, string authKey, bool tryReopen, string? password = null, string? authHeaderScheme = null, bool? force = null, int bufferSize = 2048, TimeSpan? requestTimeout = null)
 		{
 			LocalAddress=localAddress;
 			ProxyAddress=proxyServer;
@@ -39,6 +40,7 @@ namespace AwoDevProxy.Lib
 			RequestTimeout=requestTimeout;
 			ForceOpen = force;
 			Password = password;
+			AuthHeaderScheme = authHeaderScheme;
 		}
 	}
 }

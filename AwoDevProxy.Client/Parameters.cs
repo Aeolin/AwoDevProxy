@@ -42,6 +42,10 @@ namespace AwoDevProxy.Client
 		[Option("password", ['p'], Description = "The password which is needed for external requests")]
 		public string Password { get; set; } = null;
 
+		[HasDefaultValue]
+		[Option("auth-header-scheme", ['a'], Description = "The name of the auth scheme to use.")]
+		public string AuthHeaderScheme { get; set; } = null;
+
 		public ProxyEndpointConfig BuildConfig()
 		{
 			return new ProxyEndpointConfig()
@@ -55,6 +59,7 @@ namespace AwoDevProxy.Client
 				TryReopen = this.TryReopen,
 				RequestTimeout = this.RequestTimeout,
 				Password = this.Password,
+				AuthHeaderScheme = this.AuthHeaderScheme
 			};
 		}
 	}
