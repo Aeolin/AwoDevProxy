@@ -51,6 +51,18 @@ namespace AwoDevProxy.Web.Api.Proxy
 			await response.CompleteAsync();
 		}
 
+		internal static void WriteResponseHeaderToPipeline(ProxyHttpResponse proxyResponse, HttpResponse response)
+		{
+			response.StatusCode = proxyResponse.StatusCode;
+
+			if (proxyResponse.Headers != null)
+			{
+				var headers = proxyResponse.Headers.Where(x => ProxyConstants.HEADER_BLACKLIST.Contains(x.Key) == false);
+				foreach (var header in headers)
+					response.Headers.Append(header.Key, header.Value);
+			}
+		}
+
 		internal static async Task WriteResponseToPipelineAsync(ProxyHttpResponse proxyResponse, HttpResponse response)
 		{
 			response.StatusCode = proxyResponse.StatusCode;

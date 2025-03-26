@@ -8,20 +8,18 @@ using System.Threading.Tasks;
 namespace AwoDevProxy.Shared.Messages
 {
 	[MessagePackObject]
-	[PacketType<MessageType>(MessageType.HttpResponse)]
-	public class ProxyHttpResponse
+	public class ProxyDataFrame
 	{
 		[Key(0)]
 		public Guid RequestId { get; set; }
-		
+
 		[Key(1)]
-		public Dictionary<string, string[]> Headers { get; set; }
+		public int PacketCounter { get; set; }
 
 		[Key(2)]
-		public int StatusCode { get; set; }
-
+		public DataFrameType Type { get; set; }
 
 		[Key(3)]
-		public ProxyDataFrame Body { get; set; }
+		public byte[] Data { get; set; }
 	}
 }

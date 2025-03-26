@@ -37,6 +37,19 @@ namespace AwoDevProxy.Shared.Proxy
 			}
 		}
 
+		public async Task SendAsync(ProxyDataFrame dataFrame)
+		{
+			await _sendLock.WaitAsync();
+			try
+			{
+				await _socket.SendAsync(dataFrame.Data, WebSocketMessageType.Binary, dataFrame.Type == DataFrameType.Close, _cts.Token);
+			}
+			finally
+			{
+				_sendLock.Release();
+			}
+		}
+
 		public async Task<WebSocketProxyReadResult> ReadAsync()
 		{
 			try

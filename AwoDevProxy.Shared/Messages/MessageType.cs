@@ -16,6 +16,7 @@ namespace AwoDevProxy.Shared.Messages
 		WebSocketOpen = 3,
 		WebSocketData = 4,
 		WebSocketClose = 5,
-		WebSocketOpenAck = 6
+		WebSocketOpenAck = 6,
+		DataFrame = 7
 	}
 }

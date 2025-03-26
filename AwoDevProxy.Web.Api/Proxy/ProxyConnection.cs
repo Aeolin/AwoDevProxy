@@ -29,9 +29,14 @@ namespace AwoDevProxy.Web.Api.Proxy
 		private int _bufferSize;
 		private readonly CancellationTokenSource _cancelSource;
 		private readonly TimeSpan _timeout;
+
+		private readonly ConcurrentDictionary<Guid, ProxyConnectionRequestBase> _requests;
+
 		private readonly TimedTaskHolder<Guid, ProxyHttpResponse> _openRequests;
 		private readonly TimedTaskHolder<Guid, ProxyWebSocketOpenAck> _openWebsockets;
 		private readonly ConcurrentDictionary<Guid, WebSocketProxy> _webSocketProxies;
+		private readonly ConcurrentDictionary<Guid, Stream> _openResponseStreams;
+
 		private readonly RecyclableMemoryStreamManager _streamManager;
 		private readonly SemaphoreSlim _webSocketLock = new SemaphoreSlim(1, 1);
 
@@ -51,7 +56,6 @@ namespace AwoDevProxy.Web.Api.Proxy
 			_timeout = requestTimeout;
 			_openRequests = new TimedTaskHolder<Guid, ProxyHttpResponse>();
 			_openWebsockets = new TimedTaskHolder<Guid, ProxyWebSocketOpenAck>();
-			_webSocketProxies = new ConcurrentDictionary<Guid, WebSocketProxy>();
 			_streamManager = streamPool;
 			_logger = factory.CreateLogger($"{nameof(ProxyConnection)}[{name}]");
 			SocketTask = SocketWaitLoop();
@@ -62,6 +66,17 @@ namespace AwoDevProxy.Web.Api.Proxy
 
 
 
+		private async Task HandleDataFrameAsync(ProxyDataFrame frame, Action<ProxyConnectionRequestBase> action = null)
+		{
+			if (_requests.TryGetValue(frame.RequestId, out var request))
+			{
+				action?.Invoke(request);
+				var done = await request.WriteAsync(frame);
+				if (done)
+					_requests.Remove(frame.RequestId, out _);
+			}
+		}
+
 		private async void HandlePacketReceived(Stream stream)
 		{
 			var packet = PacketSerializer.Deserialize<MessageType>(stream, out var key);
@@ -69,8 +84,17 @@ namespace AwoDevProxy.Web.Api.Proxy
 			{
 				case MessageType.HttpResponse:
 					var response = (ProxyHttpResponse)packet;
-					_openRequests.SetResult(response.RequestId, response);
-					_logger.LogDebug("Got packet[{packetType}] from client for request[{requestId}]", key, response.RequestId);
+					await HandleDataFrameAsync(response.Body, req =>
+					{
+						if (req is ProxyConnectionHttpRequest http)
+							http.BeginResponse(response);
+					});
+					break;
+
+
+				case MessageType.DataFrame:
+					var dataFrame = (ProxyDataFrame)packet;
+					await HandleDataFrameAsync(dataFrame);
 					break;
 
 				case MessageType.WebSocketOpenAck:
@@ -78,35 +102,6 @@ namespace AwoDevProxy.Web.Api.Proxy
 					_openWebsockets.SetResult(open.SocketId, open);
 					_logger.LogDebug("Got packet[{packetType}] from client for websocket[{requestId}] open", key, open.SocketId);
 					break;
-
-				case MessageType.WebSocketData:
-					{
-						var data = (ProxyWebSocketData)packet;
-						if (_webSocketProxies.TryGetValue(data.SocketId, out var proxy) && proxy != null)
-						{
-							if (data.MessageType == WebSocketMessageType.Close)
-							{
-								_logger.LogDebug("Got packet[{packetType}] from client for websocket[{requestId}] close", key, data.SocketId);
-								await CloseWebSocketProxyAsync(data.SocketId, false);
-							}
-							else
-							{
-								await proxy.SendAsync(data);
-								_logger.LogDebug("Got packet[{packetType}] from client for websocket[{requestId}] data containing {dataAmoung} bytes", key, data.SocketId, data.Data.Count);
-
-							}
-						}
-
-						break;
-					}
-
-				case MessageType.WebSocketClose:
-					{
-						var close = (ProxyWebSocketClose)packet;
-						_logger.LogDebug("Got packet[{packetType}] from client for websocket[{requestId}] close", key, close.SocketId);
-						await CloseWebSocketProxyAsync(close.SocketId, false);
-						break;
-					}
 			}
 		}
 
@@ -116,7 +111,7 @@ namespace AwoDevProxy.Web.Api.Proxy
 			var key = PacketSerializer.Serialize<MessageType>(packet, (IBufferWriter<byte>)stream);
 			_logger.LogDebug("Sent packet[{packetType}] to client with {dataAmount} bytes", key, stream.Length);
 			await _webSocketLock.WaitAsync();
-			
+
 			try
 			{
 				await Socket.SendAsync(stream.GetReadOnlySequence(), _cancelSource.Token);

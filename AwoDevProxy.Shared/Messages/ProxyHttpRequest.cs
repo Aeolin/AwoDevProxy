@@ -24,10 +24,10 @@ namespace AwoDevProxy.Shared.Messages
 		public string Method { get; set; }
 
 		[Key(4)]
-		public byte[] Body { get; set; }
+		public int? TraceNumber { get; set; }
 
 		[Key(5)]
-		public int? TraceNumber { get; set; }
+		ProxyDataFrame Body { get; set; }
 
 		public override string ToString() => $"{nameof(ProxyHttpRequest)}[[{TraceNumber}]{RequestId}]";
 

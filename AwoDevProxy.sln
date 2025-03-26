@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34309.116
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AwoDevProxy.Web.Api", "AwoDevProxy.Web.Api/AwoDevProxy.Web.Api.csproj", "{3B8E9FB2-5387-4565-BCF0-34FA778C4AB5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AwoDevProxy.Web.Api", "AwoDevProxy.Web.Api\AwoDevProxy.Web.Api.csproj", "{3B8E9FB2-5387-4565-BCF0-34FA778C4AB5}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AwoDevProxy.Client", "AwoDevProxy.Client\AwoDevProxy.Client.csproj", "{29F562B2-6EAD-45D7-A8BA-AE56A4C8A073}"
 EndProject
