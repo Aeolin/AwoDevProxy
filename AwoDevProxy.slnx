@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="install-client-linux.sh" />
+    <File Path="readme.md" />
+  </Folder>
+  <Project Path="AwoDevProxy.Client/AwoDevProxy.Client.csproj" />
+  <Project Path="AwoDevProxy.Lib/AwoDevProxy.Lib.csproj" />
+  <Project Path="AwoDevProxy.Playground/AwoDevProxy.Playground.csproj" />
+  <Project Path="AwoDevProxy.Shared/AwoDevProxy.Shared.csproj" />
+  <Project Path="AwoDevProxy.Web.Api/AwoDevProxy.Web.Api.csproj" />
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
+</Solution>

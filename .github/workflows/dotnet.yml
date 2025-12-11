@@ -31,7 +31,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: 8.0      
+          dotnet-version: 10.0      
 
       - name: Save Version
         run: echo "PROJECT_VERSION=$(grep -oP '(?<=<VersionPrefix>).*?(?=</VersionPrefix>)' ./AwoDevProxy.Client/AwoDevProxy.Client.csproj)" >> $GITHUB_ENV 

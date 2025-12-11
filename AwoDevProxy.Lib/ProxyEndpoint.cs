@@ -37,7 +37,19 @@ namespace AwoDevProxy.Lib
 		public ProxyEndpoint(ProxyEndpointConfig config, ILoggerFactory factory = null, RecyclableMemoryStreamManager manager = null)
 		{
 			Config = config;
-			_http = new HttpClient() { BaseAddress = new Uri(config.LocalAddress) };
+
+			if (config.AllowLocalUntrustedCerts)
+			{
+				var handler = new HttpClientHandler();
+				handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+				_http = new HttpClient(handler);
+			}
+			else
+			{
+				_http = new HttpClient();
+			}
+
+			_http.BaseAddress = new Uri(config.LocalAddress);
 			if (config.RequestTimeout.HasValue)
 				_http.Timeout = config.RequestTimeout.Value;
 
@@ -153,7 +165,7 @@ namespace AwoDevProxy.Lib
 			_webSocketProxies.Clear();
 		}
 
-		
+
 		private string BuildQurey()
 		{
 			Dictionary<string, string> queryValues = new Dictionary<string, string>
@@ -162,14 +174,14 @@ namespace AwoDevProxy.Lib
 				{ "bufferSize", Config.BufferSize.ToString() },
 				{ "name", Config.Name },
 			};
-			
-			if(string.IsNullOrEmpty(Config.AuthHeaderScheme) == false)
+
+			if (string.IsNullOrEmpty(Config.AuthHeaderScheme) == false)
 				queryValues.Add("authHeaderScheme", Config.AuthHeaderScheme);
 
 			if (Config.RequestTimeout.HasValue)
 				queryValues.Add("requestTimeout", Config.RequestTimeout.Value.ToString());
 
-			if(string.IsNullOrEmpty(Config.Password) == false)
+			if (string.IsNullOrEmpty(Config.Password) == false)
 				queryValues.Add("password", Config.Password);
 
 			if (Config.ForceOpen.HasValue)
@@ -183,7 +195,7 @@ namespace AwoDevProxy.Lib
 		{
 			_cancelToken = cts ?? new CancellationTokenSource();
 			var query = BuildQurey();
-			var url = new Uri( $"{Config.ProxyAddress}/ws?{query}");
+			var url = new Uri($"{Config.ProxyAddress}/ws?{query}");
 
 			int retryCount = 0;
 			do

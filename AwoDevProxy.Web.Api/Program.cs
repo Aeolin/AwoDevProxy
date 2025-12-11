@@ -2,7 +2,9 @@ using AwoDevProxy.Web.Api.Middleware;
 using AwoDevProxy.Web.Api.Proxy;
 using AwoDevProxy.Web.Api.Service.Cookies;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IO;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
@@ -11,8 +13,7 @@ config.AddEnvironmentVariables();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddOpenApi();
 builder.Services.AddSingleton(config.GetSection("ProxyConfig").Get<ProxyConfig>());
 builder.Services.AddSingleton(config.GetSection("CookieConfig").Get<CookieConfig>());
 builder.Services.AddSingleton<ICookieService, CookieService>();
@@ -38,8 +39,12 @@ app.UseMiddleware<ProxyHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
-	app.UseSwagger();
-	app.UseSwaggerUI();
+	app.MapOpenApi();
+	app.MapScalarApiReference(opts => {
+		opts.WithTitle("Devproxy API")
+		.WithTheme(ScalarTheme.DeepSpace)
+		.WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
+	});
 }
 
 app.MapControllers();

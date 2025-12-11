@@ -21,7 +21,7 @@ namespace AwoDevProxy.Lib
 		public bool IsLocalSecure => LocalAddress.StartsWith("https") || LocalAddress.StartsWith("wss");
 		public string WebSocketScheme => IsLocalSecure ? "wss" : "ws";
 		public bool? ForceOpen { get; init; }
-
+		public bool AllowLocalUntrustedCerts { get; set; }
 
 		public ProxyEndpointConfig()
 		{

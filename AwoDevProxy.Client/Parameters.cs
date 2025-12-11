@@ -46,6 +46,9 @@ namespace AwoDevProxy.Client
 		[Option("auth-header-scheme", ['a'], Description = "The name of the auth scheme to use.")]
 		public string AuthHeaderScheme { get; set; } = null;
 
+		[HasDefaultValue]
+		[Option("allow-local-untrusted-certs", ['u'], Description = "Allow untrusted SSL certificates for local connections.")]
+		public bool AllowLocalUntrustedCerts { get; set; } = false;
 		public ProxyEndpointConfig BuildConfig()
 		{
 			return new ProxyEndpointConfig()
@@ -59,7 +62,8 @@ namespace AwoDevProxy.Client
 				TryReopen = this.TryReopen,
 				RequestTimeout = this.RequestTimeout,
 				Password = this.Password,
-				AuthHeaderScheme = this.AuthHeaderScheme
+				AuthHeaderScheme = this.AuthHeaderScheme,
+				AllowLocalUntrustedCerts = this.AllowLocalUntrustedCerts
 			};
 		}
 	}

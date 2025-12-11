@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AwoDevProxy.Web.Api.Controllers
 {
+	[ApiController]
 	public class ProxyController : ControllerBase
 	{
 		private IProxyManager _manager;
@@ -17,7 +18,6 @@ namespace AwoDevProxy.Web.Api.Controllers
 		}
 
 		[Route("/ws")]
-		[ApiExplorerSettings(IgnoreApi = true)]
 		public async Task<IActionResult> SetupProxyAsync([FromQuery]string name, [FromQuery]bool force = false, [FromQuery]string authKey = null, [FromQuery]TimeSpan? requestTimeout = null, [FromQuery]string password = null, [FromQuery]string authHeaderScheme = null)
 		{
 			if (HttpContext.WebSockets.IsWebSocketRequest == false)
